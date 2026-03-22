@@ -90,7 +90,7 @@ export default function BiografiPage() {
             <div className="absolute -inset-4 bg-[#0052d1]/10 rounded-full blur-2xl group-hover:bg-[#0052d1]/20 transition-all duration-700" />
             <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-8 border-white shadow-2xl">
               <img 
-                src="https://brh.co.id/Profil.jpeg" 
+                src="https://m0mix0w8bt.ufs.sh/f/4o6HWCjH0s2p2jj5eDVxAgZRPYzqB35sNO14E8GcidS0MeDF" 
                 alt="Budi Rahman Hakim" 
                 className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700 scale-105 group-hover:scale-100"
               />
