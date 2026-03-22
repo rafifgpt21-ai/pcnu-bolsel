@@ -8,6 +8,7 @@ const prisma = new PrismaClient()
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET || "rahasia-super-aman-untuk-dev-12345",
+  // @ts-expect-error PrismaAdapter type expects standard @prisma/client
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   providers: [

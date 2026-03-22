@@ -1,19 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { TiptapEditor } from './TiptapEditor';
+import { savePost } from '@/lib/actions/post';
 
-type Block = { id: string; type: 'text' | 'image' | 'video' | 'pdf'; content: string; url?: string };
+type Block = { id: string; type: 'text' | 'image' | 'video' | 'pdf'; content: string; url?: string; isLocked?: boolean };
 
 export const PostEditor = ({ initialData }: { initialData?: any }) => {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(initialData?.title || '');
   const [category, setCategory] = useState(initialData?.category || 'Buku');
   const [blocks, setBlocks] = useState<Block[]>(initialData?.blocks || []);
 
   const addBlock = (type: Block['type']) => {
-    setBlocks([...blocks, { id: Date.now().toString(), type, content: '' }]);
+    const newBlock: Block = { 
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, 
+      type, 
+      content: '',
+      url: '',
+      isLocked: false
+    };
+    setBlocks(prev => [...prev, newBlock]);
   };
 
   const moveBlock = (index: number, direction: 'up' | 'down') => {
@@ -34,9 +45,33 @@ export const PostEditor = ({ initialData }: { initialData?: any }) => {
     }
   };
 
-  const handleSave = async (status: 'publish' | 'draft' = 'publish') => {
-    // API call simulation
-    alert(`Disimpan sebagai ${status === 'publish' ? 'Publikasi' : 'Draft'} (Simulasi)!`);
+  const handleSave = async (status: 'Published' | 'Draft') => {
+    if (!title.trim()) {
+      alert('Judul tidak boleh kosong!');
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await savePost({
+        id: initialData?.id,
+        title,
+        category,
+        status,
+        blocks: blocks.map((b) => ({
+          id: b.id,
+          type: b.type,
+          content: b.content,
+          isLocked: b.isLocked ?? false,
+        })),
+      });
+
+      if (result.success) {
+        router.push('/admin');
+        router.refresh();
+      } else {
+        alert(result.error || 'Gagal menyimpan');
+      }
+    });
   };
 
   return (
@@ -106,18 +141,20 @@ export const PostEditor = ({ initialData }: { initialData?: any }) => {
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-outline-variant/20">
               <button 
-                onClick={() => handleSave('draft')}
-                className="w-full sm:w-auto bg-surface-container text-on-surface hover:bg-surface-container-high px-8 py-3.5 rounded-full font-headline font-bold transition-all shadow-sm flex items-center justify-center gap-2 border border-outline-variant/30"
+                onClick={() => handleSave('Draft')}
+                disabled={isPending}
+                className="w-full sm:w-auto bg-surface-container text-on-surface hover:bg-surface-container-high px-8 py-3.5 rounded-full font-headline font-bold transition-all shadow-sm flex items-center justify-center gap-2 border border-outline-variant/30 disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-[20px]">save</span>
-                Simpan Draft
+                {isPending ? 'Menyimpan...' : 'Simpan Draft'}
               </button>
               <button 
-                onClick={() => handleSave('publish')}
-                className="w-full sm:w-auto bg-secondary text-on-secondary px-8 py-3.5 rounded-full font-headline font-bold hover:bg-primary transition-all shadow-md flex items-center justify-center gap-2"
+                onClick={() => handleSave('Published')}
+                disabled={isPending}
+                className="w-full sm:w-auto bg-secondary text-on-secondary px-8 py-3.5 rounded-full font-headline font-bold hover:bg-primary transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-[20px]">publish</span>
-                Publikasikan Postingan
+                {isPending ? 'Menyimpan...' : 'Publikasikan Postingan'}
               </button>
             </div>
           </div>
@@ -206,19 +243,19 @@ export const PostEditor = ({ initialData }: { initialData?: any }) => {
         <div className="mt-12 flex justify-center sticky bottom-[120px] md:bottom-[100px] z-40">
           <div className="bg-surface-container-lowest/95 glass-effect border border-outline-variant/30 shadow-lg shadow-primary-container/20 rounded-full px-6 py-4 flex items-center gap-3 hover:shadow-xl transition-shadow w-max">
             <span className="text-xs font-label font-bold text-on-surface-variant uppercase tracking-widest mr-3 hidden md:block">Tertambat:</span>
-            <button onClick={() => addBlock('text')} className="flex items-center gap-2 text-sm font-bold text-primary hover:text-secondary px-3 py-2 rounded-full hover:bg-surface-container-low transition-colors text-nowrap">
+            <button type="button" onClick={() => addBlock('text')} className="flex items-center gap-2 text-sm font-bold text-primary hover:text-secondary px-3 py-2 rounded-full hover:bg-surface-container-low transition-colors text-nowrap">
               <span className="material-symbols-outlined text-[18px]">notes</span> Teks
             </button>
             <div className="w-px h-6 bg-outline-variant/40"></div>
-            <button onClick={() => addBlock('image')} className="flex items-center gap-2 text-sm font-bold text-primary hover:text-secondary px-3 py-2 rounded-full hover:bg-surface-container-low transition-colors text-nowrap">
+            <button type="button" onClick={() => addBlock('image')} className="flex items-center gap-2 text-sm font-bold text-primary hover:text-secondary px-3 py-2 rounded-full hover:bg-surface-container-low transition-colors text-nowrap">
               <span className="material-symbols-outlined text-[18px]">image</span> Gambar
             </button>
             <div className="w-px h-6 bg-outline-variant/40"></div>
-            <button onClick={() => addBlock('video')} className="flex items-center gap-2 text-sm font-bold text-primary hover:text-secondary px-3 py-2 rounded-full hover:bg-surface-container-low transition-colors text-nowrap">
+            <button type="button" onClick={() => addBlock('video')} className="flex items-center gap-2 text-sm font-bold text-primary hover:text-secondary px-3 py-2 rounded-full hover:bg-surface-container-low transition-colors text-nowrap">
               <span className="material-symbols-outlined text-[18px]">smart_display</span> Video
             </button>
             <div className="w-px h-6 bg-outline-variant/40 hidden md:block"></div>
-            <button onClick={() => addBlock('pdf')} className="items-center gap-2 text-sm font-bold text-primary hover:text-secondary px-3 py-2 rounded-full hover:bg-surface-container-low transition-colors hidden md:flex text-nowrap">
+            <button type="button" onClick={() => addBlock('pdf')} className="items-center gap-2 text-sm font-bold text-primary hover:text-secondary px-3 py-2 rounded-full hover:bg-surface-container-low transition-colors hidden md:flex text-nowrap">
               <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span> PDF
             </button>
           </div>

@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
 // Configure PDF.js worker to use external CDN for simplicity
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -23,6 +23,7 @@ export const SecurePDFViewer = ({ url }: { url: string }) => {
     >
       <div className="mb-4 flex gap-4 items-center">
         <button 
+          type="button"
           onClick={() => setPageNumber(p => Math.max(1, p - 1))}
           disabled={pageNumber <= 1}
           className="px-4 py-2 bg-(--color-primary) text-white rounded-md disabled:opacity-50 hover:bg-opacity-90 transition-colors font-medium text-sm"
@@ -33,6 +34,7 @@ export const SecurePDFViewer = ({ url }: { url: string }) => {
           Halaman {pageNumber} dari {numPages || '--'}
         </span>
         <button 
+           type="button"
            onClick={() => setPageNumber(p => Math.min(numPages || 1, p + 1))}
            disabled={pageNumber >= (numPages || 1)}
            className="px-4 py-2 bg-(--color-primary) text-white rounded-md disabled:opacity-50 hover:bg-opacity-90 transition-colors font-medium text-sm"
