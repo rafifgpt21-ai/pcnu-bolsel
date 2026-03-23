@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import { deleteFilesFromStorage } from "@/lib/uploadthing-server";
 
 // Helper: generate slug from title
@@ -177,7 +177,8 @@ export async function getPosts(options?: {
   category?: string;
 }) {
   const session = await auth();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const role = session?.user?.role;
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
 
   try {
     const where: Record<string, any> = {};
@@ -212,7 +213,8 @@ export async function getPosts(options?: {
 // GET single post by id
 export async function getPostById(id: string) {
   const session = await auth();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const role = session?.user?.role;
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
 
   try {
     const post = await prisma.post.findUnique({ where: { id } });
@@ -231,7 +233,8 @@ export async function getPostById(id: string) {
 // GET single post by slug (for public view)
 export async function getPostBySlug(slug: string) {
   const session = await auth();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const role = session?.user?.role;
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
 
   try {
     const post = await prisma.post.findUnique({ where: { slug } });
@@ -250,7 +253,8 @@ export async function getPostBySlug(slug: string) {
 // Check if a file URL (PDF/Image) is authorized to be viewed
 export async function getPostByFileUrl(url: string) {
   const session = await auth();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const role = session?.user?.role;
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
 
   try {
     // Find any post containing this URL in its blocks

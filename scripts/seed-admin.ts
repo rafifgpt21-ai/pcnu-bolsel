@@ -8,7 +8,7 @@ async function main() {
   const adminIdentifier = 'admin@brh.co.id'
   const adminUsername = 'admin'
   const password = 'admin2138'
-  
+
   const hashedPassword = await bcrypt.hash(password, 10)
 
   // Upsert command avoids failing if the user already exists
@@ -18,14 +18,14 @@ async function main() {
       password: hashedPassword,
       username: adminUsername,
       name: 'admin',
-      role: 'ADMIN',
+      role: 'SUPER_ADMIN',
     },
     create: {
       email: adminIdentifier,
       name: 'admin',
       username: adminUsername,
       password: hashedPassword,
-      role: 'ADMIN', // using 'ADMIN' for Role enum
+      role: 'SUPER_ADMIN', // using 'SUPER_ADMIN' for Role enum
     },
   })
 

@@ -1,5 +1,5 @@
 import { auth, signIn } from "@/auth";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { AuthError } from "next-auth";
 
 export default async function LoginPage({
@@ -43,8 +43,9 @@ export default async function LoginPage({
             try {
               await signIn("credentials", formData)
             } catch (error) {
+              unstable_rethrow(error)
               if (error instanceof AuthError) {
-                return redirect(`/admin/login?error=${error.type}`)
+                redirect(`/admin/login?error=${error.type}`)
               }
               throw error
             }

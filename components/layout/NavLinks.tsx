@@ -9,7 +9,7 @@ interface NavLinksProps {
 
 export const getNavLinks = (isAdmin?: boolean) => [
   { href: '/', label: 'Beranda' },
-  { href: '/katalog', label: 'Explore' },
+  { href: '/explore', label: 'Explore' },
   { href: '/biografi', label: 'Tentang' },
   ...(isAdmin ? [{ href: '/admin', label: 'Kelola' }] : []),
 ];

@@ -5,7 +5,8 @@ import { MobileMenu } from './MobileMenu';
 
 export const Header = async () => {
   const session = await auth();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
 
   return (
     <nav className="fixed top-0 w-full z-50 bg-[#fcf8fa]/80 backdrop-blur-xl transition-all duration-300">
@@ -26,7 +27,7 @@ export const Header = async () => {
                 <span className="capitalize hidden sm:inline">{session.user?.name || "User"}</span>
                 {session.user?.role && (
                   <span className="text-[10px] bg-[#0051d5] text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    {session.user.role === "ADMIN" ? "Admin" : session.user.role}
+                    {session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN" ? "Admin" : session.user.role}
                   </span>
                 )}
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down w-4 h-4 transition-transform group-open:rotate-180"><path d="m6 9 6 6 6-6"/></svg>
@@ -35,6 +36,12 @@ export const Header = async () => {
                 <div className="flex flex-col gap-1">
                   <div className="px-2 py-1.5 text-xs font-medium text-gray-400 uppercase tracking-widest">Akun</div>
                   <div className="h-px bg-gray-100 my-1 mx-2"></div>
+                  {isSuperAdmin && (
+                    <Link href="/admin/users" className="w-full text-left font-headline font-medium px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-all flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="19" cy="11" r="3"/></svg>
+                      Kelola User
+                    </Link>
+                  )}
                   <form action={async () => {
                     "use server";
                     await signOut();

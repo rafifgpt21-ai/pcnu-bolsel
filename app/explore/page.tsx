@@ -2,7 +2,7 @@ import { getPosts } from "@/lib/actions/post";
 import KatalogClient from "@/components/katalog/KatalogClient";
 
 export const metadata = {
-  title: "Katalog Karya | BRH Intellectual",
+  title: "Explore Karya | BRH Intellectual",
   description: "Telusuri kumpulan pemikiran, riset, dan opini terbaik di BRH Intellectual.",
 };
 
@@ -13,7 +13,7 @@ export default async function KaryaPage() {
 
   return (
     <main className="min-h-screen pt-12">
-      <Suspense fallback={<div>Loading Katalog...</div>}>
+      <Suspense fallback={<div></div>}>
         <KatalogClient initialPosts={posts} />
       </Suspense>
     </main>

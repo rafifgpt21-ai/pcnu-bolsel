@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "utfs.io",
       },
+      {
+        protocol: "https",
+        hostname: "**.ufs.sh",
+      },
     ],
   },
   // @ts-ignore - allowedDevOrigins is required for cross-origin dev server access

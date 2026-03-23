@@ -42,9 +42,9 @@ export default function KatalogClient({ initialPosts }: KatalogClientProps) {
       
       // Update URL without full refresh to preserve state
       if (inputValue.trim()) {
-        router.push(`/katalog?search=${encodeURIComponent(inputValue.trim())}`, { scroll: false });
+        router.push(`/explore?search=${encodeURIComponent(inputValue.trim())}`, { scroll: false });
       } else {
-        router.push(`/katalog`, { scroll: false });
+        router.push(`/explore`, { scroll: false });
       }
     }, 400);
   };
@@ -53,7 +53,7 @@ export default function KatalogClient({ initialPosts }: KatalogClientProps) {
     setInputValue("");
     setActiveSearch("");
     setActiveCategory("Semua");
-    router.push(`/katalog`, { scroll: false });
+    router.push(`/explore`, { scroll: false });
   };
 
   const filteredPosts = useMemo(() => {

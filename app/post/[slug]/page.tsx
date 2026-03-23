@@ -9,7 +9,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   const session = await auth();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const role = session?.user?.role;
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
 
   if (!post || (post.status !== "Published" && !isAdmin)) {
     return { title: "Post Not Found" };
@@ -283,7 +284,7 @@ export default async function SinglePostPage({ params }: { params: Promise<{ slu
               Beranda
             </Link>
             <Link 
-              href="/katalog"
+              href="/explore"
               className="px-8 py-3 rounded-full bg-surface-container-high text-primary font-headline font-bold text-sm hover:translate-y-[-2px] transition-all border border-outline-variant/20 active:scale-[0.98]"
             >
               Katalog Karya

@@ -14,9 +14,9 @@ export default function HeroSearch() {
     setIsSubmitting(true);
     
     if (query.trim()) {
-      router.push(`/katalog?search=${encodeURIComponent(query.trim())}`);
+      router.push(`/explore?search=${encodeURIComponent(query.trim())}`);
     } else {
-      router.push("/katalog");
+      router.push("/explore");
     }
   };
 

@@ -1,8 +1,17 @@
 import Link from 'next/link';
+import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { getPosts } from '@/lib/actions/post';
 import HomeHero from '@/components/home/HomeHero';
-import ImpactMetrics from '@/components/home/ImpactMetrics';
-import ScrollReveal from '@/components/home/ScrollReveal';
+
+// Dynamically import components that are below the fold
+const ImpactMetrics = dynamic(() => import('@/components/home/ImpactMetrics'), {
+  ssr: true,
+});
+
+const ScrollReveal = dynamic(() => import('@/components/home/ScrollReveal'), {
+  ssr: true,
+});
 
 export default async function Home() {
   const allPosts = await getPosts({ status: 'Published' });
@@ -28,7 +37,7 @@ export default async function Home() {
 
         {latestPosts.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            {latestPosts.map((post, index) => {
+            {latestPosts.map((post: any, index: number) => {
               // Extract snippet from first text block
               const firstTextBlock = post.blocks?.find((b: any) => b.type === 'text');
               const plainContent = firstTextBlock?.content ? firstTextBlock.content.replace(/<[^>]*>?/gm, '') : '';
@@ -66,26 +75,29 @@ export default async function Home() {
                            <span className="material-symbols-outlined text-[18px] text-on-surface-variant/40">calendar_today</span>
                            <p className="text-on-surface-variant/60 text-xs font-bold tracking-tight">
                              {new Date(post.createdAt).toLocaleDateString('id-ID', {
-                               day: 'numeric',
-                               month: 'long',
-                               year: 'numeric',
-                             })}
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                              })}
                            </p>
                         </div>
                         <div className="inline-flex items-center text-secondary font-black text-xs gap-2 group-hover:gap-4 transition-all duration-500 uppercase tracking-widest">
-                          BACA SELENGKAPNYA
+                           BACA SELENGKAPNYA
                           <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">east</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Thumbnail (Right) */}
-                    <div className="w-full sm:w-48 md:w-64 lg:w-56 xl:w-72 aspect-square sm:aspect-auto shrink-0 relative overflow-hidden order-1 sm:order-2">
+                    <div className="w-full sm:w-48 md:w-64 lg:w-56 xl:w-72 aspect-square sm:aspect-auto shrink-0 relative overflow-hidden order-1 sm:order-2 text-primary font-black text-lg">
                       {post.thumbnail ? (
-                        <img
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out grayscale-20 group-hover:grayscale-0"
-                          alt={post.title}
+                        <Image
                           src={post.thumbnail}
+                          alt={post.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          className="object-cover group-hover:scale-110 transition-transform duration-1000 ease-out grayscale-20 group-hover:grayscale-0"
+                          priority={index < 2} // Prioritize first two images for LCP
                         />
                       ) : (
                         <div className="w-full h-full bg-linear-to-br from-secondary/10 to-primary/15 flex items-center justify-center">
@@ -114,7 +126,7 @@ export default async function Home() {
 
         <ScrollReveal delay={0.4} className="mt-20 text-center">
            <Link 
-             href="/katalog" 
+             href="/explore" 
              className="inline-flex items-center gap-4 px-10 py-5 bg-primary text-on-primary rounded-full font-headline font-bold text-lg hover:bg-secondary transition-all duration-500 hover:shadow-xl hover:shadow-secondary/20 hover:-translate-y-1"
            >
              Lihat Semua Karya
