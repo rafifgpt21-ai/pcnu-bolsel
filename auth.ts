@@ -4,8 +4,12 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 
+if (!process.env.AUTH_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("Missing AUTH_SECRET environment variable.");
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  secret: process.env.AUTH_SECRET || "rahasia-super-aman-untuk-dev-12345",
+  secret: process.env.AUTH_SECRET,
   // @ts-expect-error PrismaAdapter type expects standard @prisma/client
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },

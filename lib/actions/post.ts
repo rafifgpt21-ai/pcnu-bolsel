@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath, unstable_cache, revalidateTag } from "next/cache";
 import { deleteFilesFromStorage } from "@/lib/uploadthing-server";
+import { z } from "zod";
 
 // Helper: generate slug from title
 function generateSlug(title: string): string {
@@ -21,16 +22,37 @@ export type PostFormData = {
   category: string;
   thumbnail?: string;
   status: "Published" | "Draft";
-  blocks: {
-    id: string;
-    type: string;
-    content: string;
-    url?: string;
-    title?: string;
-    caption?: string;
-    isLocked?: boolean;
-  }[];
+  blocks: PostBlock[];
 };
+
+type PostBlock = {
+  id: string;
+  type: string;
+  content: string;
+  url?: string | null;
+  title?: string | null;
+  caption?: string | null;
+  isLocked?: boolean;
+};
+
+const blockSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  content: z.string(),
+  url: z.string().optional().nullable(),
+  title: z.string().optional().nullable(),
+  caption: z.string().optional().nullable(),
+  isLocked: z.boolean().optional(),
+});
+
+const postFormSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1, "Judul tidak boleh kosong"),
+  category: z.string().min(1, "Kategori tidak boleh kosong"),
+  thumbnail: z.string().optional(),
+  status: z.enum(["Published", "Draft"]),
+  blocks: z.array(blockSchema),
+});
 
 // CREATE or UPDATE a post
 export async function savePost(data: PostFormData) {
@@ -39,27 +61,34 @@ export async function savePost(data: PostFormData) {
     return { success: false, error: "Unauthorized" };
   }
 
-  try {
-    const slug = generateSlug(data.title);
+  const parsedData = postFormSchema.safeParse(data);
+  if (!parsedData.success) {
+    return { success: false, error: "Validasi data gagal: " + parsedData.error.issues[0].message };
+  }
 
-    if (data.id) {
+  const validData = parsedData.data;
+
+  try {
+    const slug = generateSlug(validData.title);
+
+    if (validData.id) {
       // UPDATE existing post
       // 1. Fetch old post to compare files
-      const oldPost = await prisma.post.findUnique({ where: { id: data.id } });
+      const oldPost = await prisma.post.findUnique({ where: { id: validData.id } });
       if (!oldPost) return { success: false, error: "Post tidak ditemukan" };
 
       const filesToDelete: string[] = [];
 
       // Check thumbnail
-      if (oldPost.thumbnail && oldPost.thumbnail !== data.thumbnail) {
+      if (oldPost.thumbnail && oldPost.thumbnail !== validData.thumbnail) {
         filesToDelete.push(oldPost.thumbnail);
       }
 
       // Check blocks
-      const oldUrls = (oldPost.blocks as any[])
+      const oldUrls = (oldPost.blocks as PostBlock[])
         .map((b) => b.url)
         .filter((url): url is string => !!url);
-      const newUrls = data.blocks
+      const newUrls = validData.blocks
         .map((b) => b.url)
         .filter((url): url is string => !!url);
 
@@ -72,14 +101,14 @@ export async function savePost(data: PostFormData) {
 
       // 2. Update post
       const post = await prisma.post.update({
-        where: { id: data.id },
+        where: { id: validData.id },
         data: {
-          title: data.title,
+          title: validData.title,
           slug,
-          category: data.category,
-          thumbnail: data.thumbnail || null,
-          status: data.status,
-          blocks: data.blocks.map((b) => ({
+          category: validData.category,
+          thumbnail: validData.thumbnail || null,
+          status: validData.status,
+          blocks: validData.blocks.map((b) => ({
             id: b.id,
             type: b.type,
             content: b.content,
@@ -114,12 +143,12 @@ export async function savePost(data: PostFormData) {
 
       const post = await prisma.post.create({
         data: {
-          title: data.title,
+          title: validData.title,
           slug: uniqueSlug,
-          category: data.category,
-          thumbnail: data.thumbnail || null,
-          status: data.status,
-          blocks: data.blocks.map((b) => ({
+          category: validData.category,
+          thumbnail: validData.thumbnail || null,
+          status: validData.status,
+          blocks: validData.blocks.map((b) => ({
             id: b.id,
             type: b.type,
             content: b.content,
@@ -155,7 +184,7 @@ export async function deletePost(id: string) {
       if (post.thumbnail) filesToDelete.push(post.thumbnail);
       
       // Clean up blocks
-      post.blocks.forEach((block: any) => {
+      (post.blocks as PostBlock[]).forEach((block) => {
         if (block.url) filesToDelete.push(block.url);
       });
 
@@ -183,7 +212,7 @@ const getPostsCached = unstable_cache(
     category?: string;
   }, isAdmin?: boolean) => {
     try {
-      const where: Record<string, any> = {};
+      const where: Record<string, unknown> = {};
 
       if (!isAdmin) {
         where.status = "Published";

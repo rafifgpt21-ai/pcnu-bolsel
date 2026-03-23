@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const hostWithPort = appUrl.replace(/^https?:\/\//, ""); // Ambil domain/IP + port
+const hostOnly = hostWithPort.split(":")[0]; // Ambil domain/IP-nya saja tanpa port
+
 const nextConfig: NextConfig = {
   /* config options here */
   images: {
@@ -18,8 +22,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // @ts-ignore - allowedDevOrigins is required for cross-origin dev server access
-  allowedDevOrigins: ["10.146.131.12"],
+  // Solusi Elegan untuk Server Actions Origin & Cross-Origin Dev Access
+  experimental: {
+    serverActions: {
+      allowedOrigins: [hostWithPort, "localhost:3000"],
+    },
+  },
+  // @ts-ignore - allowedDevOrigins is only active in development for HMR/Web Socket
+  allowedDevOrigins: process.env.NODE_ENV === "development" ? [hostOnly] : [],
 };
 
 export default nextConfig;
