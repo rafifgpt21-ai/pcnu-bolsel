@@ -1,6 +1,6 @@
-import { auth, signIn } from "@/auth";
-import { redirect, unstable_rethrow } from "next/navigation";
-import { AuthError } from "next-auth";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import LoginForm from "@/components/admin/LoginForm";
 
 export default async function LoginPage({
   searchParams,
@@ -31,62 +31,13 @@ export default async function LoginPage({
           <p className="font-body text-on-surface-variant text-sm">Masuk untuk mengelola konten web</p>
         </div>
         
-        {error && (
+        {error && !error.includes("CredentialsSignin") && (
           <div className="bg-error/10 text-error p-4 rounded-xl text-sm font-medium mb-6 text-center border border-error/20">
-            {error === "CredentialsSignin" ? "Username/Email atau Password salah." : "Terjadi kesalahan saat login."}
+            {error === "SessionRequired" ? "Silakan login untuk mengakses halaman ini." : "Terjadi kesalahan sistem."}
           </div>
         )}
         
-        <form
-          action={async (formData) => {
-            "use server"
-            try {
-              await signIn("credentials", formData)
-            } catch (error) {
-              unstable_rethrow(error)
-              if (error instanceof AuthError) {
-                redirect(`/admin/login?error=${error.type}`)
-              }
-              throw error
-            }
-          }}
-          className="space-y-6"
-        >
-          <div className="space-y-3">
-            <label htmlFor="identifier" className="block text-xs font-label font-bold tracking-widest uppercase text-secondary">
-              Email atau Username
-            </label>
-            <input 
-              type="text" 
-              name="identifier" 
-              id="identifier" 
-              required 
-              placeholder="admin / admin@brh.co.id" 
-              className="h-14 font-body bg-surface-container-lowest border border-outline-variant/50 outline-none focus:ring-2 focus:ring-secondary/50 rounded-xl px-5 w-full text-on-surface placeholder:text-on-surface-variant/50 shadow-inner" 
-            />
-          </div>
-
-          <div className="space-y-3">
-            <label htmlFor="password" className="block text-xs font-label font-bold tracking-widest uppercase text-secondary">
-              Password
-            </label>
-            <input 
-              type="password" 
-              name="password" 
-              id="password" 
-              required 
-              placeholder="••••••••" 
-              className="h-14 font-body bg-surface-container-lowest border border-outline-variant/50 outline-none focus:ring-2 focus:ring-secondary/50 rounded-xl px-5 w-full text-on-surface placeholder:text-on-surface-variant/50 shadow-inner" 
-            />
-          </div>
-
-          <button 
-            type="submit" 
-            className="w-full bg-secondary text-on-secondary h-14 rounded-xl font-headline font-bold hover:shadow-lg hover:shadow-secondary/20 hover:scale-[1.02] transition-all duration-200 cursor-pointer text-base uppercase tracking-wider"
-          >
-            Masuk
-          </button>
-        </form>
+        <LoginForm />
       </div>
     </div>
   );

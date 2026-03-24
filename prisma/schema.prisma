@@ -99,3 +99,13 @@ type Block {
   caption  String?
   isLocked Boolean? @default(false)
 }
+
+model RateLimit {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String   @unique // Bisa berupa IP Address, Email, atau kombinasi keduanya
+  attempts   Int      @default(1)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([expiresAt]) // Indeks ini akan berguna untuk cleanup
+}

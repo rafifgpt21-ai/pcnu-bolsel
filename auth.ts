@@ -31,7 +31,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Rate Limiting Check
         const limit = await checkRateLimit(identifier);
         if (!limit.success) {
-          throw new Error(`Terlalu banyak percobaan login. Silakan coba lagi dalam beberapa menit.`);
+          const waitMinutes = limit.resetTime 
+            ? Math.ceil((limit.resetTime.getTime() - new Date().getTime()) / 60000)
+            : 15;
+          throw new Error(`Terlalu banyak percobaan login. Silakan coba lagi dalam ${waitMinutes} menit.`);
         }
 
         const user = await prisma.user.findFirst({
