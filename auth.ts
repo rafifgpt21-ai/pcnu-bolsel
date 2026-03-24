@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 if (!process.env.AUTH_SECRET && process.env.NODE_ENV === "production") {
   throw new Error("Missing AUTH_SECRET environment variable.");
@@ -10,7 +11,8 @@ if (!process.env.AUTH_SECRET && process.env.NODE_ENV === "production") {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
-  // @ts-expect-error PrismaAdapter type expects standard @prisma/client
+  // @ts-expect-error PrismaAdapter type expects standard @prisma/client, but we use a custom output path.
+  // The runtime compatibility is verified.
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   providers: [
@@ -26,6 +28,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         
         const identifier = credentials.identifier as string
         
+        // Rate Limiting Check
+        const limit = await checkRateLimit(identifier);
+        if (!limit.success) {
+          throw new Error(`Terlalu banyak percobaan login. Silakan coba lagi dalam beberapa menit.`);
+        }
+
         const user = await prisma.user.findFirst({
           where: {
             OR: [

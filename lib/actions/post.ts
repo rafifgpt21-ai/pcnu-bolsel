@@ -133,12 +133,29 @@ export async function savePost(data: PostFormData) {
       return { success: true, post };
     } else {
       // CREATE new post
-      // Ensure slug uniqueness
+      // Ensure slug uniqueness with a robust retry mechanism
       let uniqueSlug = slug;
-      let counter = 1;
-      while (await prisma.post.findUnique({ where: { slug: uniqueSlug } })) {
-        uniqueSlug = `${slug}-${counter}`;
-        counter++;
+      let isUnique = false;
+      let retryCount = 0;
+      const MAX_RETRIES = 10;
+
+      while (!isUnique && retryCount < MAX_RETRIES) {
+        const existing = await prisma.post.findUnique({ 
+          where: { slug: uniqueSlug },
+          select: { id: true } 
+        });
+        
+        if (!existing) {
+          isUnique = true;
+        } else {
+          retryCount++;
+          // Append a random string or counter for uniqueness
+          uniqueSlug = `${slug}-${Math.random().toString(36).substring(2, 7)}`;
+        }
+      }
+
+      if (!isUnique) {
+        return { success: false, error: "Gagal membuat slug unik setelah beberapa percobaan" };
       }
 
       const post = await prisma.post.create({

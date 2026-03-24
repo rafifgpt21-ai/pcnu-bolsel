@@ -3,8 +3,13 @@
 import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { SecurePDFViewer } from "@/components/SecurePDFViewer";
+import dynamic from "next/dynamic";
 import React from "react";
+
+const SecurePDFViewer = dynamic(
+  () => import("@/components/SecurePDFViewer").then((mod) => mod.SecurePDFViewer),
+  { ssr: false }
+);
 
 interface PostClientProps {
   post: any;
@@ -68,14 +73,14 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
                 alt={post.title}
                 fill
                 priority
-                className="w-full h-full object-cover blur-3xl scale-110 opacity-40"
+                className="w-full h-full object-cover blur-md scale-110 opacity-80"
               />
               <div className="absolute inset-0 bg-linear-to-t from-surface-container-lowest via-surface-container-lowest/20 to-transparent" />
               <div className="absolute inset-0 bg-linear-to-b from-surface-container-lowest/10 to-transparent" />
             </div>
           ) : (
             <div className="h-full bg-surface-container-low flex flex-col items-center justify-center p-8 border-b border-outline-variant/10">
-               <div className="absolute inset-0 -z-10 opacity-20 pointer-events-none">
+              <div className="absolute inset-0 -z-10 opacity-20 pointer-events-none">
                 <div className="absolute top-0 left-1/4 w-96 h-96 bg-secondary-fixed blur-[120px] rounded-full"></div>
                 <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary-fixed blur-[120px] rounded-full"></div>
               </div>
@@ -85,7 +90,7 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
 
         {/* Floating Content Header */}
         <div className="max-w-4xl mx-auto px-6 relative z-10 text-center py-20">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
@@ -98,8 +103,8 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
               <span className="material-symbols-outlined text-[16px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
               Kembali Ke Beranda
             </Link>
-            
-            <motion.div 
+
+            <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
@@ -110,7 +115,7 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
               </span>
             </motion.div>
 
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.8 }}
@@ -119,7 +124,7 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
               {post.title}
             </motion.h1>
 
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 1 }}
@@ -166,8 +171,8 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
               }
               if (block.type === "image") {
                 return (
-                  <motion.div 
-                    key={block.id} 
+                  <motion.div
+                    key={block.id}
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-100px" }}
@@ -178,18 +183,19 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
                       {block.title && (
                         <h3 className="text-2xl font-headline font-extrabold text-primary tracking-tight text-center">{block.title}</h3>
                       )}
-                      <div className="rounded-4xl overflow-hidden border border-outline-variant/10 bg-surface-container-low transform transition-transform duration-700 group-hover:scale-[1.01] relative min-h-[300px]">
+                      <div className="rounded-4xl overflow-hidden border border-outline-variant/10 bg-surface-container-low transform transition-transform duration-700">
                         <Image
                           src={block.url || block.content}
                           alt={block.title || "Image content"}
-                          fill
-                          className="object-contain"
-                          sizes="(max-width: 768px) 100vw, 800px"
+                          width={1600}
+                          height={900}
+                          className="w-full h-auto block"
+                          sizes="(max-width: 768px) 100vw, 1200px"
                         />
                       </div>
                       {block.caption && (
                         <p className="text-sm text-on-surface-variant font-medium text-center italic mt-2 opacity-80">
-                           {block.caption}
+                          {block.caption}
                         </p>
                       )}
                     </div>
@@ -198,15 +204,15 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
               }
               if (block.type === "pdf") {
                 return (
-                  <motion.div 
-                    key={block.id} 
+                  <motion.div
+                    key={block.id}
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-100px" }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                     className="my-12"
                   >
-                    <Link 
+                    <Link
                       href={`/pdf-viewer?url=${encodeURIComponent(block.url || block.content)}&title=${encodeURIComponent(block.title || "Dokumen")}`}
                       className="flex items-center gap-6 p-8 rounded-4xl bg-surface-container-high border border-outline-variant/15 hover:bg-surface-container-highest transition-all duration-500 group active:scale-[0.98]"
                     >
@@ -228,7 +234,7 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
                     </Link>
                     {block.caption && (
                       <p className="text-sm text-on-surface-variant font-medium italic mt-6 border-l-2 border-secondary/20 pl-4">
-                         {block.caption}
+                        {block.caption}
                       </p>
                     )}
                   </motion.div>
@@ -236,8 +242,8 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
               }
               if (block.type === "video") {
                 return (
-                  <motion.div 
-                    key={block.id} 
+                  <motion.div
+                    key={block.id}
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-100px" }}
@@ -261,7 +267,7 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
                       </div>
                       {block.caption && (
                         <p className="text-sm text-on-surface-variant font-medium italic text-center">
-                           {block.caption}
+                          {block.caption}
                         </p>
                       )}
                     </div>
@@ -270,15 +276,15 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
               }
               if (block.type === "link") {
                 return (
-                  <motion.div 
-                    key={block.id} 
+                  <motion.div
+                    key={block.id}
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-100px" }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                     className="my-12"
                   >
-                    <a 
+                    <a
                       href={block.url}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -302,7 +308,7 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
                     </a>
                     {block.caption && (
                       <p className="text-sm text-on-surface-variant font-medium italic mt-6 border-l-2 border-primary/20 pl-4">
-                         {block.caption}
+                        {block.caption}
                       </p>
                     )}
                   </motion.div>
@@ -314,7 +320,7 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
         </div>
 
         {/* Footer Navigation */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -322,13 +328,13 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
         >
           <p className="font-label text-xs font-bold tracking-[0.2em] uppercase text-on-surface-variant mb-6">Penutup Artikel</p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link 
+            <Link
               href="/"
               className="px-8 py-3 rounded-full bg-primary text-on-primary font-headline font-bold text-sm hover:translate-y-[-2px] hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-[0.98]"
             >
               Beranda
             </Link>
-            <Link 
+            <Link
               href="/explore"
               className="px-8 py-3 rounded-full bg-surface-container-high text-primary font-headline font-bold text-sm hover:translate-y-[-2px] transition-all border border-outline-variant/20 active:scale-[0.98]"
             >
@@ -346,8 +352,8 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
               <span className="font-label text-xs font-bold tracking-[0.2em] text-secondary uppercase">Baca Juga</span>
               <h2 className="font-headline font-bold text-3xl md:text-4xl mt-4 text-primary">Arsip Terkait Lainnya</h2>
             </div>
-            
-            <motion.div 
+
+            <motion.div
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, margin: "-100px" }}
@@ -376,7 +382,7 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
                       <div className="aspect-16/10 overflow-hidden relative">
                         <Image
                           fill
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                          className="w-full h-full object-cover transition-transform duration-700"
                           alt={rPost.title}
                           src={rPost.thumbnail}
                           sizes="(max-width: 768px) 100vw, 33vw"
