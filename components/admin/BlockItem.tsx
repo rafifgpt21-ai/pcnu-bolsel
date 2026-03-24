@@ -28,6 +28,7 @@ interface BlockItemProps {
   stagedFile?: File;
   onUpdate: (id: string, data: Partial<Block>) => void;
   onRemove: (id: string) => void;
+  onConfirmRemove: (id: string) => void;
   onCancelDelete: () => void;
   onMove: (index: number, direction: 'up' | 'down') => void;
   onFileSelect: (id: string) => void;
@@ -44,6 +45,7 @@ export const BlockItem = memo(({
   stagedFile,
   onUpdate,
   onRemove,
+  onConfirmRemove,
   onCancelDelete,
   onMove,
   onFileSelect,
@@ -90,7 +92,7 @@ export const BlockItem = memo(({
             <div className="flex items-center gap-1.5 px-1 animate-in slide-in-from-right-2 duration-200">
               <button
                 type="button"
-                onClick={() => onRemove(block.id)}
+                onClick={() => onConfirmRemove(block.id)}
                 className="h-7 px-3 rounded-full bg-error text-on-error text-[9px] font-black uppercase tracking-wider hover:bg-error-container hover:text-on-error-container transition-colors shadow-sm"
               >
                 Hapus

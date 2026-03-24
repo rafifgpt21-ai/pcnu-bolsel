@@ -49,10 +49,11 @@ export default function HeroSearch() {
           <button 
             type="submit"
             disabled={isSubmitting}
-            className="bg-primary text-on-primary hover:bg-secondary px-8 py-4 rounded-full font-headline font-black text-xs uppercase tracking-widest transition-all duration-500 shadow-lg shadow-primary/20 hover:shadow-secondary/30 active:scale-95 disabled:opacity-50 flex items-center gap-2"
+            className="bg-primary text-on-primary hover:bg-secondary px-5 md:px-8 py-4 rounded-full font-headline font-black text-xs uppercase tracking-widest transition-all duration-500 shadow-lg shadow-primary/20 hover:shadow-secondary/30 active:scale-95 disabled:opacity-50 flex items-center gap-2"
           >
-            <span>Cari</span>
-            <span className="material-symbols-outlined text-[18px]">east</span>
+            <span className="hidden md:inline">Cari</span>
+            <span className="material-symbols-outlined text-[20px] md:hidden">search</span>
+            <span className="material-symbols-outlined text-[18px] hidden md:inline">east</span>
           </button>
         </div>
       </form>

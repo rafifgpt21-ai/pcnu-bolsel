@@ -8,6 +8,22 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Missing URL parameter", { status: 400 });
   }
 
+  // SSRF Protection: Validate target URL
+  try {
+    const parsedUrl = new URL(targetUrl);
+    const allowedDomains = ["utfs.io", "ufs.sh"];
+    const isAllowed = allowedDomains.some(domain => 
+      parsedUrl.hostname === domain || parsedUrl.hostname.endsWith(`.${domain}`)
+    );
+
+    if (!isAllowed) {
+      console.error(`Blocked SSRF attempt to unauthorized domain: ${parsedUrl.hostname}`);
+      return new NextResponse("Unauthorized domain", { status: 403 });
+    }
+  } catch (e) {
+    return new NextResponse("Invalid URL format", { status: 400 });
+  }
+
   try {
     const response = await fetch(targetUrl);
     

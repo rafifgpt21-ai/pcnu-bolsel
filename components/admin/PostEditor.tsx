@@ -182,17 +182,6 @@ export const PostEditor = ({ initialData }: { initialData?: any }) => {
     setBlocks((prev) => {
       const block = prev.find((b) => b.id === id);
       if (!block) return prev;
-
-      // Note: stagedFiles and previews access from outer scope might be stale if not careful
-      // But they are state, so we should use functional updates if we need them.
-      // However, check if empty logic depends on state.
-      return prev; // We'll handle state-dependent logic outside functional update or pass needed info
-    });
-
-    // Re-implementing with access to current state
-    setBlocks((prev) => {
-      const block = prev.find((b) => b.id === id);
-      if (!block) return prev;
       
       const isEmpty = block.type === 'text'
         ? (!block.content || block.content.replace(/<[^>]*>/g, '').trim() === '')
@@ -624,6 +613,7 @@ export const PostEditor = ({ initialData }: { initialData?: any }) => {
               stagedFile={stagedFiles[block.id]}
               onUpdate={updateBlock}
               onRemove={removeBlock}
+              onConfirmRemove={confirmRemoveBlock}
               onCancelDelete={() => setBlockToDelete(null)}
               onMove={moveBlock}
               onFileSelect={onBlockFileSelect}
