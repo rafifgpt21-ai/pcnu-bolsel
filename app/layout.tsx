@@ -16,8 +16,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "BRH Intellectual Web Platform",
-  description: "Menyemai Pemikiran, Menggerakkan Perubahan",
+  title: "PCNU Bolsel - Portal Berita Resmi",
+  description: "Portal Berita Resmi Nahdlatul Ulama Bolaang Mongondow Selatan",
 };
 
 export default function RootLayout({

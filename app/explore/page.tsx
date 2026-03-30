@@ -1,14 +1,12 @@
 import { getPosts } from "@/lib/actions/post";
-import KatalogClient from "@/components/katalog/KatalogClient";
-
-export const metadata = {
-  title: "Explore Karya | BRH Intellectual",
-  description: "Telusuri kumpulan pemikiran, riset, dan opini terbaik di BRH Intellectual.",
-};
-
+import ExploreClient from "@/components/explore/ExploreClient";
+import ExploreSkeleton from "@/components/explore/ExploreSkeleton";
 import { Suspense } from "react";
 
-import KatalogSkeleton from "@/components/katalog/KatalogSkeleton";
+export const metadata = {
+  title: "Jelajah Artikel & Berita | PCNU Bolsel",
+  description: "Telusuri kumpulan berita terbaru, opini mendalam, dan hasil riset strategis dari PCNU Bolaang Mongondow Selatan.",
+};
 
 export default async function KaryaPage({
   searchParams,
@@ -23,10 +21,12 @@ export default async function KaryaPage({
   });
 
   return (
-    <main className="min-h-screen pt-12">
-      <Suspense key={`${search}-${category}`} fallback={<KatalogSkeleton />}>
-        <KatalogClient initialPosts={posts} />
+    <main className="min-h-screen bg-surface-container-lowest">
+      <Suspense fallback={<ExploreSkeleton />}>
+        <ExploreClient initialPosts={posts} />
       </Suspense>
     </main>
   );
 }
+
+

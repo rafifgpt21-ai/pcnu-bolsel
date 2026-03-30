@@ -39,54 +39,69 @@ function Counter({ value, direction = 'up' }: CounterProps) {
 export default function ImpactMetrics() {
   const metrics = [
     {
-      label: 'Buku Diterbitkan',
-      value: 12,
-      suffix: '+',
-      icon: 'menu_book',
+      label: 'Majelis Wakil Cabang',
+      value: 7,
+      suffix: '',
+      icon: 'account_balance',
     },
     {
-      label: 'Jurnal Ilmiah',
-      value: 58,
-      suffix: '+',
-      icon: 'description',
+      label: 'Pengurus Ranting',
+      value: 81,
+      suffix: '',
+      icon: 'location_city',
     },
     {
-      label: 'Diskusi Publik',
-      value: 120,
-      suffix: '+',
-      icon: 'forum',
+      label: 'Lembaga & Banom',
+      value: 18,
+      suffix: '',
+      icon: 'group_work',
     },
     {
-      label: 'Tahun Kontribusi',
-      value: 15,
+      label: 'Berita Diterbitkan',
+      value: 100,
       suffix: '+',
-      icon: 'history_edu',
+      icon: 'article',
     },
   ];
 
   return (
-    <section className="w-full py-24 bg-surface-container-lowest border-y border-outline-variant/10">
-      <div className="max-w-7xl mx-auto px-6 md:px-12">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
+    <section className="w-full py-24 relative overflow-hidden bg-surface z-10">
+      {/* Decorative Background Elements */}
+      <div className="absolute top-0 right-0 w-full h-px bg-linear-to-r from-transparent via-primary/20 to-transparent"></div>
+      <div className="absolute bottom-0 left-0 w-full h-px bg-linear-to-r from-transparent via-secondary/20 to-transparent"></div>
+
+      <div className="max-w-7xl mx-auto px-6 md:px-12 relative">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 lg:gap-10">
           {metrics.map((metric, index) => (
             <motion.div
               key={metric.label}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1, duration: 0.8 }}
-              className="flex flex-col items-center text-center group"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              whileInView={{ opacity: 1, scale: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ 
+                delay: index * 0.1, 
+                duration: 0.8,
+                type: "spring",
+                stiffness: 80,
+                damping: 15
+              }}
+              className="group relative flex flex-col items-center text-center p-8 rounded-4xl bg-surface-container-lowest/40 backdrop-blur-md border border-outline-variant/20 hover:border-primary/30 shadow-sm hover:shadow-2xl hover:shadow-primary/5 transition-all duration-700 hover:-translate-y-2 overflow-hidden"
             >
-              <div className="w-16 h-16 rounded-3xl bg-primary/5 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-500">
-                <span className="material-symbols-outlined text-primary text-3xl">
+              {/* Card Glow Effect on Hover */}
+              <div className="absolute inset-0 bg-linear-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+
+              <div className="w-20 h-20 rounded-3xl bg-surface border border-outline-variant/30 flex items-center justify-center mb-6 shadow-xs group-hover:scale-110 group-hover:rotate-3 group-hover:bg-primary/5 group-hover:border-primary/20 group-hover:shadow-primary/10 transition-all duration-500 relative z-10">
+                <span className="material-symbols-outlined text-primary text-4xl group-hover:text-secondary transition-colors duration-500">
                   {metric.icon}
                 </span>
               </div>
-              <div className="font-headline font-black text-4xl md:text-5xl text-primary mb-2 tracking-tight flex items-center justify-center">
+              
+              <div className="font-headline font-black text-4xl md:text-5xl lg:text-[3.5rem] text-primary mb-3 tracking-tighter flex items-center justify-center relative z-10">
                 <Counter value={metric.value} />
-                <span className="text-secondary ml-1">{metric.suffix}</span>
+                <span className="ml-1 bg-clip-text text-transparent bg-linear-to-r from-secondary to-primary">{metric.suffix}</span>
               </div>
-              <p className="font-label text-sm font-bold tracking-widest uppercase text-on-surface-variant/70">
+              
+              <p className="font-label text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase text-on-surface-variant/80 relative z-10 group-hover:text-primary transition-colors duration-500">
                 {metric.label}
               </p>
             </motion.div>

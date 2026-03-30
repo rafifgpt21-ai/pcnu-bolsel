@@ -26,7 +26,7 @@ export default async function Home() {
       <ImpactMetrics />
 
       {/* Content Section */}
-      <section id="arsip" className="w-full px-6 md:px-12 lg:px-24 mx-auto py-32 bg-surface">
+      <section id="arsip" className="w-full px-4 sm:px-8 md:px-12 lg:px-24 mx-auto py-32 bg-surface relative z-20">
         <ScrollReveal className="mb-20">
           <span className="font-label text-xs font-bold tracking-[0.3em] text-secondary uppercase block mb-4">ARSIP INTELEKTUAL</span>
           <h2 className="font-headline font-black text-4xl md:text-5xl lg:text-6xl text-primary leading-tight tracking-tighter">
@@ -49,8 +49,11 @@ export default async function Home() {
                 <ScrollReveal key={post.id} delay={index * 0.1}>
                   <Link
                     href={`/post/${post.slug}`}
-                    className="group relative flex flex-col sm:flex-row bg-surface-container-lowest rounded-[32px] overflow-hidden border border-outline-variant/15 hover:shadow-2xl hover:shadow-primary/10 transition-all duration-700 hover:-translate-y-2 h-full"
+                    className="group relative flex flex-col sm:flex-row bg-surface-container-lowest/60 backdrop-blur-2xl rounded-[2.5rem] overflow-hidden border border-outline-variant/20 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/15 transition-all duration-700 hover:-translate-y-2 h-full"
                   >
+                    {/* Inner Glow */}
+                    <div className="absolute inset-0 rounded-[2.5rem] ring-1 ring-inset ring-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-20 pointer-events-none"></div>
+
                     {/* Info Area (Left) */}
                     <div className="flex-1 p-8 md:p-10 flex flex-col justify-between order-2 sm:order-1 relative z-10">
                       <div>
@@ -135,21 +138,33 @@ export default async function Home() {
         </ScrollReveal>
       </section>
 
-      {/* Featured Quote / Philosophic Section */}
-      <section className="w-full py-32 bg-primary relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+      {/* Featured Quote Section - KH Hasyim Asyari */}
+      <section className="w-full py-32 bg-surface relative overflow-hidden">
+        {/* Dynamic Abstract Background Elements */}
+        <div className="absolute inset-0 opacity-40">
+           <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[80vw] max-w-[600px] h-[80vw] max-h-[600px] bg-primary/20 blur-[130px] rounded-full mix-blend-multiply pointer-events-none"></div>
+           <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[70vw] max-w-[500px] h-[70vw] max-h-[500px] bg-secondary/20 blur-[100px] rounded-full mix-blend-multiply pointer-events-none"></div>
         </div>
-        <div className="max-w-5xl mx-auto px-8 text-center relative z-10">
-          <ScrollReveal>
-            <span className="material-symbols-outlined text-secondary text-7xl mb-12 opacity-50 italic">format_quote</span>
-            <h2 className="font-headline font-black text-3xl md:text-5xl lg:text-6xl text-on-primary leading-tight tracking-tighter mb-12 italic">
-              &quot;Intelektualitas bukan sekadar menghafal fakta, melainkan kemampuan untuk menggerakkan perubahan melalui pemikiran yang kritis dan jernih.&quot;
-            </h2>
-            <div className="flex flex-col items-center">
-               <div className="h-1 w-20 bg-secondary mb-6"></div>
-               <p className="font-label text-on-primary/60 tracking-[0.4em] uppercase font-bold text-sm">Prinsip Dasar BRH</p>
+
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 relative z-10">
+          <ScrollReveal className="relative bg-surface-container-lowest/60 backdrop-blur-2xl rounded-[2.5rem] md:rounded-[3.5rem] p-8 md:p-14 lg:p-20 border border-outline-variant/20 shadow-2xl shadow-primary/5 text-center group overflow-hidden">
+            <span className="material-symbols-outlined text-secondary text-8xl md:text-[10rem] mb-0 opacity-10 absolute top-0 w-full left-0 text-center -z-10 group-hover:scale-110 transition-transform duration-1000">format_quote</span>
+            <div className="inline-flex w-20 h-20 rounded-full bg-primary/5 items-center justify-center mb-8 border border-primary/10 group-hover:bg-primary/10 transition-colors">
+               <span className="material-symbols-outlined text-secondary text-4xl drop-shadow-sm">auto_awesome</span>
             </div>
+            
+            <h2 className="font-headline font-black text-2xl md:text-4xl lg:text-[2.75rem] text-primary leading-normal tracking-tight mb-12 italic relative z-10 opacity-90 group-hover:opacity-100 transition-opacity duration-500">
+              &quot;Jangan jadikan perbedaan pendapat sebagai sebab perpecahan dan permusuhan. Karena yang demikian itu merupakan kejahatan besar yang bisa meruntuhkan bangunan masyarakat, dan menutup pintu kebaikan di penjuru mana saja.&quot;
+            </h2>
+            
+            <div className="flex flex-col items-center relative z-10">
+               <div className="h-[2px] w-16 bg-linear-to-r from-transparent via-secondary to-transparent mb-6"></div>
+               <p className="font-headline font-black text-xl md:text-2xl text-primary tracking-tight">Hadratussyekh KH. Hasyim Asy&apos;ari</p>
+               <p className="font-label text-secondary tracking-[0.3em] uppercase font-bold text-[10px] md:text-xs mt-3">Muassis Nahdlatul Ulama</p>
+            </div>
+            
+            {/* Subtle Inner Glow */}
+            <div className="absolute inset-0 rounded-[2.5rem] md:rounded-[3.5rem] ring-1 ring-inset ring-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
           </ScrollReveal>
         </div>
       </section>

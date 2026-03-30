@@ -4,12 +4,14 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { checkRateLimit } from "@/lib/rate-limit"
+import { authConfig } from "./auth.config"
 
 if (!process.env.AUTH_SECRET && process.env.NODE_ENV === "production") {
   throw new Error("Missing AUTH_SECRET environment variable.");
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   secret: process.env.AUTH_SECRET,
   // @ts-expect-error PrismaAdapter type expects standard @prisma/client, but we use a custom output path.
   // The runtime compatibility is verified.
@@ -68,41 +70,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  pages: {
-    signIn: "/admin/login",
-  },
-  callbacks: {
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const role = auth?.user?.role;
-      const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-      const isSuperAdmin = role === 'SUPER_ADMIN';
-      
-      const isProtectedPath = nextUrl.pathname.startsWith('/admin') && nextUrl.pathname !== '/admin/login';
-      const isUserManagementPath = nextUrl.pathname.startsWith('/admin/users');
-
-      if (isUserManagementPath) {
-        if (isLoggedIn && isSuperAdmin) return true;
-        return Response.redirect(new URL('/admin', nextUrl));
-      }
-
-      if (isProtectedPath) {
-        if (isLoggedIn && isAdmin) return true;
-        return false; // Redirect to sign in
-      }
-      return true;
-    },
-    jwt: async ({ token, user }) => {
-      if (user) {
-        token.role = user.role
-      }
-      return token
-    },
-    session: async ({ session, token }) => {
-      if (session.user && token.role) {
-        session.user.role = token.role as string
-      }
-      return session
-    },
-  },
 })
+

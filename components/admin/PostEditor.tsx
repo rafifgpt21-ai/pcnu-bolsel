@@ -21,13 +21,13 @@ type Block = {
   isLocked?: boolean;
 };
 
-const CATEGORIES = ['Buku', 'Jurnal', 'Artikel', 'Opini'];
+const CATEGORIES = ['Berita'];
 
 export const PostEditor = ({ initialData }: { initialData?: any }) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(initialData?.title || '');
-  const [category, setCategory] = useState(initialData?.category || 'Buku');
+  const [category, setCategory] = useState(initialData?.category || 'Berita');
   const [thumbnail, setThumbnail] = useState(initialData?.thumbnail || '');
   const [blocks, setBlocks] = useState<Block[]>(() =>
     initialData?.blocks ? JSON.parse(JSON.stringify(initialData.blocks)) : []
@@ -51,7 +51,7 @@ export const PostEditor = ({ initialData }: { initialData?: any }) => {
 
   const isDirty =
     title !== (initialData?.title || '') ||
-    category !== (initialData?.category || 'Buku') ||
+    category !== (initialData?.category || 'Berita') ||
     thumbnail !== (initialData?.thumbnail || '') ||
     Object.keys(stagedFiles).length > 0 ||
     JSON.stringify(blocks.map(b => ({ ...b, id: b.id }))) !== JSON.stringify((initialData?.blocks || []).map((b: any) => ({ ...b, id: b.id })));

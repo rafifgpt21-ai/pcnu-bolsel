@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
 import { deletePost } from '@/lib/actions/post';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -22,17 +21,22 @@ export function AdminPostList({ initialPosts }: { initialPosts: Post[] }) {
   const [activeTab, setActiveTab] = useState<'all' | 'Published' | 'Draft'>('all');
   const [isPending, startTransition] = useTransition();
   const [deleteModal, setDeleteModal] = useState<{ id: string, title: string } | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Post; direction: 'asc' | 'desc' } | null>({
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Post; direction: 'asc' | 'desc' }>({
     key: 'updatedAt',
     direction: 'desc',
   });
 
-  const requestSort = (key: keyof Post) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
+  const sortOptions = [
+    { label: 'Terbaru Diubah', key: 'updatedAt', direction: 'desc', icon: 'schedule' },
+    { label: 'Terlama Diubah', key: 'updatedAt', direction: 'asc', icon: 'history' },
+    { label: 'Judul A-Z', key: 'title', direction: 'asc', icon: 'sort_by_alpha' },
+    { label: 'Judul Z-A', key: 'title', direction: 'desc', icon: 'sort_by_alpha' },
+  ] as const;
+
+  const handleSort = (key: keyof Post, direction: 'asc' | 'desc') => {
     setSortConfig({ key, direction });
+    setIsSortOpen(false);
   };
 
   const sortedPosts = [...posts].sort((a, b) => {
@@ -91,214 +95,267 @@ export function AdminPostList({ initialPosts }: { initialPosts: Post[] }) {
   ];
 
   return (
-    <div className="w-full pb-24 max-w-[1400px] mx-auto sm:px-6 lg:px-8">
-
-      {/* 1. Header & Kontrol */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-3 md:py-4 sticky top-20 bg-surface/95 backdrop-blur-md z-20 px-1 md:px-0">
-
-        {/* Filter Tab */}
-        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 hide-scrollbar">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-5 py-2.5 font-semibold text-sm rounded-full whitespace-nowrap transition-all ${activeTab === tab.key
-                ? 'bg-on-surface text-surface-container-lowest shadow-sm hover:shadow-md'
-                : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low border border-outline-variant/30'
-                }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+    <div className="min-h-screen bg-surface-container-lowest pb-24">
+      {/* 1. Header Section - Hidden on Mobile to save space */}
+      <div className="hidden md:block relative pt-12 pb-8 overflow-hidden">
+        <div className="absolute inset-0 -z-10 bg-linear-to-b from-surface-container-low/50 to-transparent" />
+        <div className="absolute top-0 right-0 -z-10 opacity-20 blur-[100px] pointer-events-none translate-x-1/2 -translate-y-1/2">
+           <div className="w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-primary-fixed rounded-full" />
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant/50 text-[18px]">search</span>
-            <input
-              type="text"
-              placeholder="Cari dalam karya..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-surface-container-low/50 focus:bg-surface-container-low border border-outline-variant/30 rounded-full py-2.5 sm:py-3 pl-11 pr-4 text-sm font-medium focus:outline-none focus:border-on-surface/40 transition-all text-on-surface placeholder:text-on-surface-variant/50"
-            />
-          </div>
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant/5">
+                <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                <span className="font-label text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">Admin Panel</span>
+              </div>
+              <h1 className="text-4xl md:text-5xl font-headline font-black text-primary tracking-tight">
+                Kelola <span className="text-secondary italic">Karya</span>
+              </h1>
+              <p className="text-on-surface-variant font-medium opacity-70">
+                Manajemen konten artikel, berita, dan khazanah literasi.
+              </p>
+            </div>
 
-          <Link href="/admin/post/new" className="shrink-0 ml-1 hidden sm:flex">
-            <Button className="rounded-full! bg-primary text-on-primary hover:bg-primary/90 px-8 py-2.5 h-11 text-sm font-bold shadow-none flex items-center gap-2">
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              <span>Tambah Baru</span>
-            </Button>
-          </Link>
+            <Link href="/admin/post/new" className="hidden md:block">
+              <button className="group relative flex items-center gap-3 px-8 py-4 bg-primary text-on-primary rounded-full font-bold text-sm shadow-xl shadow-primary/20 hover:translate-y-[-2px] transition-all duration-300">
+                <span className="material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform duration-500">add</span>
+                <span>Tambah Karya Baru</span>
+                <div className="absolute inset-0 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Floating Action Button (Mobile Only) */}
-      <Link href="/admin/post/new" className="sm:hidden fixed bottom-8 right-6 z-50">
-        <Button className="w-16 h-16 rounded-full! bg-primary text-on-primary shadow-2xl hover:bg-primary/90 flex items-center justify-center p-0">
-          <span className="material-symbols-outlined text-[36px]">add</span>
-        </Button>
-      </Link>
-
-      {/* 2. Area Data */}
-      <div className={`bg-surface-container-lowest border border-outline-variant/30 rounded-3xl overflow-hidden shadow-sm ${isPending ? 'opacity-60 pointer-events-none' : ''}`}>
-
-        {/* Desktop Header Row */}
-        <div className="hidden lg:grid grid-cols-12 gap-4 px-8 py-4 bg-surface-container-low/30 border-b border-outline-variant/30 text-[11px] font-bold text-on-surface-variant/70 uppercase tracking-widest">
-          <button 
-            onClick={() => requestSort('title')}
-            className="col-span-1 lg:col-span-5 flex items-center gap-1.5 hover:text-on-surface transition-colors cursor-pointer text-left"
-          >
-            Judul Karya
-            {sortConfig?.key === 'title' && (
-              <span className="material-symbols-outlined text-[16px] animate-in fade-in duration-300">
-                {sortConfig.direction === 'asc' ? 'arrow_upward' : 'arrow_downward'}
-              </span>
-            )}
-          </button>
-          
-          <button 
-            onClick={() => requestSort('category')}
-            className="col-span-2 flex items-center gap-1.5 hover:text-on-surface transition-colors cursor-pointer text-left"
-          >
-            Kategori
-            {sortConfig?.key === 'category' && (
-              <span className="material-symbols-outlined text-[16px] animate-in fade-in duration-300">
-                {sortConfig.direction === 'asc' ? 'arrow_upward' : 'arrow_downward'}
-              </span>
-            )}
-          </button>
-
-          <button 
-            onClick={() => requestSort('updatedAt')}
-            className="col-span-2 flex items-center gap-1.5 hover:text-on-surface transition-colors cursor-pointer text-left"
-          >
-            Terakhir Diubah
-            {sortConfig?.key === 'updatedAt' && (
-              <span className="material-symbols-outlined text-[16px] animate-in fade-in duration-300">
-                {sortConfig.direction === 'asc' ? 'arrow_upward' : 'arrow_downward'}
-              </span>
-            )}
-          </button>
-
-          <button 
-            onClick={() => requestSort('status')}
-            className="col-span-1 flex items-center justify-center gap-1.5 hover:text-on-surface transition-colors cursor-pointer"
-          >
-            Status
-            {sortConfig?.key === 'status' && (
-              <span className="material-symbols-outlined text-[16px] animate-in fade-in duration-300">
-                {sortConfig.direction === 'asc' ? 'arrow_upward' : 'arrow_downward'}
-              </span>
-            )}
-          </button>
-
-          <div className="col-span-2 text-right">Aksi</div>
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-12 pt-6 md:pt-0">
+        {/* Mobile Title (Compact) */}
+        <div className="md:hidden mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-headline font-black text-primary tracking-tight">
+            Kelola <span className="text-secondary italic">Karya</span>
+          </h1>
+          <div className="px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant/5 text-[8px] font-bold tracking-widest text-on-surface-variant uppercase">
+            Admin
+          </div>
         </div>
+        {/* 2. Sticky Kontrol */}
+        <div className="sticky top-16 md:top-20 z-30 mb-4 md:mb-8 p-1.5 md:p-2 rounded-3xl md:rounded-4xl bg-surface-container-low/90 backdrop-blur-xl border border-outline-variant/10 shadow-lg shadow-black/5">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+            
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-0.5 overflow-x-auto w-full lg:w-auto p-0.5 hide-scrollbar">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`relative flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-full text-[9px] md:text-[11px] font-black uppercase tracking-widest transition-all duration-500 whitespace-nowrap
+                    ${activeTab === tab.key
+                      ? 'bg-primary text-on-primary shadow-md'
+                      : 'text-on-surface-variant hover:text-primary'
+                    }`}
+                >
+                  {activeTab === tab.key && (
+                    <motion.div
+                      layoutId="activeTabAdmin"
+                      className="absolute inset-0 bg-primary rounded-full -z-10"
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-        {/* Data Rows */}
-        <div className="divide-y divide-outline-variant/20">
-          {filteredPosts.map((post) => (
-            <div key={post.id} className="group grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 items-start lg:items-center px-5 sm:px-6 lg:px-8 py-5 hover:bg-surface-container-low/50 transition-colors">
-
-              {/* Kolom 1: Judul */}
-              <div className="col-span-1 lg:col-span-5 flex items-start sm:items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-surface-container flex items-center justify-center shrink-0 text-on-surface-variant/80">
-                  <span className="material-symbols-outlined text-[24px]">
-                    {post.category === 'Buku' ? 'auto_stories' : post.category === 'Jurnal' ? 'science' : post.category === 'Opini' ? 'forum' : 'article'}
-                  </span>
-                </div>
-
-                <div className="flex-1 pr-2">
-                  <Link href={`/admin/post/${post.id}`}>
-                    <h3 className="text-base font-bold text-on-surface group-hover:text-primary transition-colors line-clamp-2 lg:line-clamp-1 leading-snug">
-                      {post.title}
-                    </h3>
-                  </Link>
-                  {/* Mobile meta */}
-                  <div className="flex lg:hidden flex-wrap items-center gap-2 mt-1.5 text-xs text-on-surface-variant/80 font-medium">
-                    <span className="bg-surface-container-low px-2 py-0.5 rounded-md">{post.category}</span>
-                    <span className="w-1 h-1 rounded-full bg-outline-variant/60"></span>
-                    <span>{formatDate(post.updatedAt)}</span>
-                    <span className="w-1 h-1 rounded-full bg-outline-variant/60"></span>
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${post.status === 'Published'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-surface-container text-on-surface-variant'
-                      }`}>
-                      {post.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Kolom 2: Kategori */}
-              <div className="hidden lg:block col-span-2 text-sm font-semibold text-on-surface-variant/80">
-                {post.category}
-              </div>
-
-              {/* Kolom 3: Tanggal */}
-              <div className="hidden lg:block col-span-2 text-sm text-on-surface-variant/80">
-                {formatDate(post.updatedAt)}
-              </div>
-
-              {/* Kolom 4: Status Badge */}
-              <div className="hidden lg:flex col-span-1 items-center justify-center">
-                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${post.status === 'Published'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-surface-container-high text-on-surface-variant'
-                  }`}>
-                  {post.status}
+            {/* Search & Sort */}
+            <div className="flex items-center gap-3 w-full lg:w-auto pr-2">
+              <div className="relative flex-1 lg:w-80 group">
+                <input
+                  type="text"
+                  placeholder="Cari karya anda..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-surface-container-highest/50 border border-outline-variant/10 rounded-full py-3 md:py-4 pl-10 md:pl-12 pr-6 text-xs md:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/40"
+                />
+                <span className="absolute left-3.5 md:left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant/40 group-focus-within:text-primary transition-colors text-lg md:text-xl">
+                  search
                 </span>
               </div>
-
-              {/* Kolom 5: Action Buttons */}
-              <div className="col-span-1 lg:col-span-2 flex items-center justify-end gap-1.5 w-full lg:w-auto mt-2 lg:mt-0 transition-opacity">
-                <Link
-                  href={`/post/${post.slug}`}
-                  target="_blank"
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors"
-                  title="Lihat"
+              
+              <div className="relative">
+                <button 
+                  onClick={() => setIsSortOpen(!isSortOpen)}
+                  className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border border-outline-variant/10 transition-all relative
+                    ${isSortOpen ? 'bg-primary text-on-primary' : 'bg-surface-container-highest/50 text-on-surface-variant hover:border-primary/30'}`}
+                  title="Opsi Pengurutan"
                 >
-                  <span className="material-symbols-outlined text-[20px]">visibility</span>
-                </Link>
-                <Link
-                  href={`/admin/post/${post.id}`}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors"
-                  title="Edit Karya"
-                >
-                  <span className="material-symbols-outlined text-[20px]">edit</span>
-                </Link>
-                <button
-                  onClick={() => handleDelete(post.id, post.title)}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:bg-error-container text-on-surface-variant hover:text-error transition-colors cursor-pointer"
-                  title="Hapus Karya"
-                >
-                  <span className="material-symbols-outlined text-[20px]">delete</span>
+                  <span className={`material-symbols-outlined transition-transform duration-500 text-lg md:text-xl ${isSortOpen ? 'rotate-180' : ''}`}>
+                    filter_list
+                  </span>
                 </button>
-              </div>
 
+                <AnimatePresence>
+                  {isSortOpen && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setIsSortOpen(false)} 
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute right-0 mt-4 w-64 bg-surface-container-low/95 backdrop-blur-2xl border border-outline-variant/10 rounded-3xl shadow-2xl z-50 overflow-hidden"
+                      >
+                        <div className="p-2 space-y-1">
+                          {sortOptions.map((opt) => {
+                            const isActive = sortConfig.key === opt.key && sortConfig.direction === opt.direction;
+                            return (
+                              <button
+                                key={`${opt.key}-${opt.direction}`}
+                                onClick={() => handleSort(opt.key as keyof Post, opt.direction)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all
+                                  ${isActive 
+                                    ? 'bg-primary text-on-primary' 
+                                    : 'text-on-surface-variant hover:bg-surface-container-highest'
+                                  }`}
+                              >
+                                <span className={`material-symbols-outlined text-[18px] ${isActive ? 'text-secondary' : 'opacity-40'}`}>
+                                  {opt.icon}
+                                </span>
+                                <span className="uppercase tracking-widest">{opt.label}</span>
+                                {isActive && (
+                                  <span className="material-symbols-outlined ml-auto text-[16px]">check_circle</span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-          ))}
+          </div>
+        </div>
+
+        {/* 3. Area List Karya */}
+        <div className={`space-y-4 ${isPending ? 'opacity-50 pointer-events-none' : ''}`}>
+
+          <AnimatePresence mode="popLayout" initial={false}>
+            {filteredPosts.map((post, index) => (
+              <motion.div
+                key={post.id}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: index * 0.05, duration: 0.4 }}
+                className="group relative bg-surface-container-lowest border border-outline-variant/10 rounded-2xl md:rounded-3xl p-3 md:p-6 hover:border-primary/30 hover:shadow-xl hover:shadow-black/5 transition-all duration-500"
+              >
+                <div className="flex flex-row items-center gap-3 md:gap-6">
+                  {/* Icon / Category Thumbnail */}
+                  <div className="w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-surface-container-low flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-all duration-500 shrink-0">
+                    <span className="material-symbols-outlined text-lg md:text-3xl">
+                      {post.category === 'Buku' ? 'auto_stories' : post.category === 'Jurnal' ? 'science' : post.category === 'Opini' ? 'forum' : 'article'}
+                    </span>
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
+                      <span className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-secondary truncate">{post.category}</span>
+                      <span className="w-1 h-1 rounded-full bg-outline-variant/30 shrink-0" />
+                      <span className="text-[7px] md:text-[10px] font-bold text-on-surface-variant opacity-60 truncate">{formatDate(post.updatedAt)}</span>
+                    </div>
+                    <Link href={`/admin/post/${post.id}`}>
+                      <h3 className="text-sm md:text-xl font-headline font-bold text-on-surface group-hover:text-primary transition-colors leading-tight line-clamp-1">
+                        {post.title}
+                      </h3>
+                    </Link>
+                    <div className="flex md:hidden mt-1.5">
+                       <div className={`px-2 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest
+                        ${post.status === 'Published'
+                          ? 'bg-primary/10 text-primary border border-primary/20'
+                          : 'bg-surface-container-highest text-on-surface-variant border border-outline-variant/10'
+                        }`}>
+                        {post.status}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status & Actions */}
+                  <div className="flex items-center gap-2 md:gap-6 shrink-0">
+                    {/* Status Badge (Desktop) */}
+                    <div className={`hidden md:block px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-sm
+                      ${post.status === 'Published'
+                        ? 'bg-primary/10 text-primary border border-primary/20'
+                        : 'bg-surface-container-highest text-on-surface-variant border border-outline-variant/10'
+                      }`}>
+                      {post.status}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1 md:gap-2">
+                       <Link
+                        href={`/admin/post/${post.id}`}
+                        className="w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-surface-container-low text-on-surface-variant hover:bg-primary hover:text-on-primary transition-all duration-500 shadow-sm"
+                        title="Edit Konten"
+                      >
+                        <span className="material-symbols-outlined text-sm md:text-lg">edit</span>
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(post.id, post.title)}
+                        className="w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-surface-container-low text-on-surface-variant hover:bg-error hover:text-on-error transition-all duration-500 shadow-sm"
+                        title="Hapus"
+                      >
+                        <span className="material-symbols-outlined text-sm md:text-lg">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {filteredPosts.length === 0 && (
-            <div className="py-24 text-center">
-              <div className="inline-flex w-20 h-20 items-center justify-center rounded-3xl bg-surface-container mb-5 text-on-surface-variant/30">
-                <span className="material-symbols-outlined text-4xl">inventory_2</span>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="py-32 text-center bg-surface-container-lowest rounded-4xl border border-dashed border-outline-variant/30"
+            >
+              <div className="inline-flex w-24 h-24 items-center justify-center rounded-4xl bg-surface-container-low mb-6 text-outline-variant/40">
+                <span className="material-symbols-outlined text-5xl">inventory_2</span>
               </div>
-              <p className="text-lg font-bold text-on-surface-variant">
-                {search ? 'Tidak ditemukan' : 'Belum ada karya'}
-              </p>
-              <p className="text-sm text-on-surface-variant/60 mt-1 max-w-sm mx-auto">
+              <h3 className="text-2xl font-headline font-black text-primary mb-2">
+                {search ? 'Pencarian Nihil' : 'Belum Ada Jejak'}
+              </h3>
+              <p className="text-sm text-on-surface-variant/60 font-medium max-w-sm mx-auto">
                 {search
-                  ? `Tidak ada hasil untuk "${search}". Coba kata kunci lain.`
-                  : 'Anda belum menambahkan artikel atau buku. Mulai tambahkan karya baru!'
+                  ? `Kata kunci "${search}" tidak ditemukan di lemari arsip kami.`
+                  : 'Anda belum melahirkan karya apapun. Mari mulai goreskan tinta sejarah!'
                 }
               </p>
-            </div>
+              {!search && (
+                <Link href="/admin/post/new" className="inline-block mt-8">
+                  <button className="px-8 py-4 bg-primary text-on-primary rounded-full font-bold text-xs tracking-widest uppercase shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
+                    Mulai Berkarya
+                  </button>
+                </Link>
+              )}
+            </motion.div>
           )}
         </div>
       </div>
+
+      {/* Floating Action Button (Mobile) */}
+      <Link href="/admin/post/new" className="md:hidden fixed bottom-10 right-8 z-50">
+        <button className="w-16 h-16 rounded-2xl bg-primary text-on-primary shadow-2xl flex items-center justify-center overflow-hidden active:scale-95 transition-all">
+          <span className="material-symbols-outlined text-3xl">add</span>
+          <div className="absolute inset-0 bg-white/20 opacity-0 active:opacity-100 transition-opacity" />
+        </button>
+      </Link>
 
       {/* 3. Custom Modal Delete */}
       <AnimatePresence>
@@ -312,33 +369,38 @@ export function AdminPostList({ initialPosts }: { initialPosts: Post[] }) {
               className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm"
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-sm bg-surface-container-lowest rounded-4xl p-8 shadow-2xl border border-outline-variant/20"
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              className="relative w-full max-w-md bg-surface-container-lowest rounded-4xl p-10 shadow-2xl border border-outline-variant/20 overflow-hidden"
             >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-3xl bg-error-container/20 flex items-center justify-center text-error mb-6">
-                  <span className="material-symbols-outlined text-4xl">delete_forever</span>
+              <div className="absolute top-0 right-0 p-8 opacity-5 text-error">
+                <span className="material-symbols-outlined text-9xl">delete</span>
+              </div>
+              
+              <div className="relative flex flex-col items-center text-center">
+                <div className="w-20 h-20 rounded-4xl bg-error/10 flex items-center justify-center text-error mb-8">
+                  <span className="material-symbols-outlined text-4xl">warning</span>
                 </div>
-                <h3 className="text-xl font-bold text-on-surface mb-2">Konfirmasi Hapus</h3>
-                <p className="text-sm text-on-surface-variant font-medium leading-relaxed mb-8">
-                  Apakah Anda yakin ingin menghapus <span className="text-on-surface font-bold italic">"{deleteModal.title}"</span>? Tindakan ini tidak dapat dibatalkan.
+                
+                <h3 className="text-2xl font-headline font-black text-on-surface mb-4">Hapus Permanen?</h3>
+                <p className="text-sm text-on-surface-variant font-medium leading-relaxed mb-10">
+                  Anda akan menghapus <span className="text-primary font-bold">"{deleteModal.title}"</span>. Tindakan ini merupakan langkah akhir dan tidak dapat dikembalikan.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-3 w-full">
-                  <Button
-                    onClick={() => setDeleteModal(null)}
-                    variant="outline"
-                    className="flex-1 rounded-full h-12 text-sm font-bold border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-high"
-                  >
-                    Batal
-                  </Button>
-                  <Button
+                
+                <div className="flex flex-col gap-3 w-full">
+                  <button
                     onClick={confirmDelete}
-                    className="flex-1 rounded-full h-12 text-sm font-bold bg-error text-on-error hover:bg-error/90 shadow-lg shadow-error/20"
+                    className="w-full py-4 rounded-full bg-error text-on-error font-bold text-xs tracking-widest uppercase shadow-lg shadow-error/20 hover:scale-[1.02] active:scale-95 transition-all"
                   >
-                    Hapus Permanen
-                  </Button>
+                    Ya, Hapus Karya
+                  </button>
+                  <button
+                    onClick={() => setDeleteModal(null)}
+                    className="w-full py-4 rounded-full border border-outline-variant/30 text-on-surface-variant font-bold text-xs tracking-widest uppercase hover:bg-surface-container-high transition-all"
+                  >
+                    Batalkan
+                  </button>
                 </div>
               </div>
             </motion.div>

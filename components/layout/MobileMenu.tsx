@@ -75,8 +75,8 @@ export const MobileMenu = ({ isAdmin }: MobileMenuProps) => {
                     transitionDelay: isOpen ? `${150 + i * 80}ms` : '0ms',
                   }}
                   className={`block text-3xl font-headline font-bold tracking-tighter transition-all duration-500 ease-out ${isActive
-                      ? "text-[#0051d5] translate-x-2"
-                      : "text-slate-900/70 hover:text-[#0051d5] hover:translate-x-1"
+                      ? "text-[#016E45] translate-x-2"
+                      : "text-slate-900/70 hover:text-[#016E45] hover:translate-x-1"
                     } ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95'}`}
                 >
                   {link.label}
@@ -90,15 +90,15 @@ export const MobileMenu = ({ isAdmin }: MobileMenuProps) => {
             className={`mt-auto pt-10 border-t border-slate-100 space-y-4 transition-all duration-700 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
           >
             <div>
-              <p className="text-[10px] font-bold text-[#0051d5] uppercase tracking-[0.2em] mb-1">
-                Platform
+              <p className="text-[10px] font-bold text-[#016E45] uppercase tracking-[0.2em] mb-1">
+                Portal Resmi
               </p>
               <p className="text-sm font-headline font-semibold text-slate-900">
-                BRH Intellectual
+                PCNU Bolsel
               </p>
             </div>
             <div className="text-xs text-slate-500 font-medium leading-relaxed">
-              Menyemai Pemikiran,<br />Menggerakkan Perubahan
+              Merawat Jagat,<br />Membangun Peradaban
             </div>
           </div>
         </div>

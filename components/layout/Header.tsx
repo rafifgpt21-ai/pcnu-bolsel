@@ -14,7 +14,7 @@ export const Header = async () => {
         <div className="flex items-center gap-4">
           <MobileMenu isAdmin={isAdmin} />
           <div className="text-xl font-bold tracking-tighter text-[#0F172A] font-headline">
-            <Link href="/">BRH Intellectual</Link>
+            <Link href="/">PCNU Bolsel</Link>
           </div>
         </div>
         
@@ -23,10 +23,10 @@ export const Header = async () => {
         <div className="flex items-center gap-4">
           {session ? (
             <details className="relative group cursor-pointer">
-              <summary className="list-none flex items-center gap-3 bg-secondary/5 px-4 py-2 rounded-xl text-[#0051d5] font-headline font-medium transition-all hover:bg-secondary/10">
+              <summary className="list-none flex items-center gap-3 bg-secondary/5 px-4 py-2 rounded-xl text-[#016E45] font-headline font-medium transition-all hover:bg-secondary/10">
                 <span className="capitalize hidden sm:inline">{session.user?.name || "User"}</span>
                 {session.user?.role && (
-                  <span className="text-[10px] bg-[#0051d5] text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[10px] bg-[#016E45] text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
                     {session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN" ? "Admin" : session.user.role}
                   </span>
                 )}
@@ -55,7 +55,7 @@ export const Header = async () => {
               </div>
             </details>
           ) : (
-            <Link href="/admin/login" className="text-[#0051d5] font-headline font-medium px-6 py-2 rounded-xl hover:bg-secondary/5 transition-all text-sm sm:text-base">
+            <Link href="/admin/login" className="text-[#016E45] font-headline font-medium px-6 py-2 rounded-xl hover:bg-secondary/5 transition-all text-sm sm:text-base">
               Masuk
             </Link>
           )}

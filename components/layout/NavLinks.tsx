@@ -9,8 +9,7 @@ interface NavLinksProps {
 
 export const getNavLinks = (isAdmin?: boolean) => [
   { href: '/', label: 'Beranda' },
-  { href: '/explore', label: 'Explore' },
-  { href: '/biografi', label: 'Tentang' },
+  { href: '/explore', label: 'Jelajah' },
   ...(isAdmin ? [{ href: '/admin', label: 'Kelola' }] : []),
 ];
 
@@ -29,8 +28,8 @@ export const NavLinks = ({ isAdmin }: NavLinksProps) => {
             href={link.href}
             className={`transition-colors duration-300 font-headline font-medium tracking-tight ${
               isActive 
-                ? "text-[#0051d5]" 
-                : "text-[#1b1b1d]/70 hover:text-[#0051d5]"
+                ? "text-[#016E45]" 
+                : "text-[#1b1b1d]/70 hover:text-[#016E45]"
             }`}
           >
             {link.label}

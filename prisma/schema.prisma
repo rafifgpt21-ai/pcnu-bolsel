@@ -81,7 +81,7 @@ model Post {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   title     String
   slug      String   @unique
-  category  String   // 'Buku', 'Jurnal', 'Artikel', 'Opini'
+  category  String   @default("Berita") // 'Berita'
   status    String   @default("Draft") // 'Published' | 'Draft'
   thumbnail String?
   blocks    Block[]
