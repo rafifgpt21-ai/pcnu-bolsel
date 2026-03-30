@@ -222,41 +222,6 @@ export async function deletePost(id: string) {
   }
 }
 
-const getPostsCached = unstable_cache(
-  async (options?: {
-    search?: string;
-    status?: string;
-    category?: string;
-  }, isAdmin?: boolean) => {
-    try {
-      const where: Record<string, unknown> = {};
-
-      if (!isAdmin) {
-        where.status = "Published";
-      } else if (options?.status) {
-        where.status = options.status;
-      }
-
-      if (options?.search) {
-        where.title = { contains: options.search, mode: "insensitive" };
-      }
-      if (options?.category) {
-        where.category = options.category;
-      }
-
-      return await prisma.post.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-      });
-    } catch (error: unknown) {
-      console.error("Error fetching posts:", error);
-      return [];
-    }
-  },
-  ["get-posts"],
-  { tags: ["posts"], revalidate: 3600 }
-);
-
 export async function getPosts(options?: {
   search?: string;
   status?: string;
@@ -264,7 +229,46 @@ export async function getPosts(options?: {
 }) {
   const session = await auth();
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
-  return getPostsCached(options, isAdmin);
+  
+  // Create cache key based on options
+  const key = [
+    "get-posts",
+    options?.search || "all",
+    options?.status || "all",
+    options?.category || "all",
+    String(isAdmin)
+  ];
+
+  return unstable_cache(
+    async () => {
+      try {
+        const where: Record<string, unknown> = {};
+
+        if (!isAdmin) {
+          where.status = "Published";
+        } else if (options?.status) {
+          where.status = options.status;
+        }
+
+        if (options?.search) {
+          where.title = { contains: options.search, mode: "insensitive" };
+        }
+        if (options?.category) {
+          where.category = options.category;
+        }
+
+        return await prisma.post.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+        });
+      } catch (error: unknown) {
+        console.error("Error fetching posts:", error);
+        return [];
+      }
+    },
+    key,
+    { tags: ["posts"], revalidate: 3600 }
+  )();
 }
 
 // GET single post by id

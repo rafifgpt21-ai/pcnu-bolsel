@@ -258,7 +258,7 @@ export function AdminPostList({ initialPosts }: { initialPosts: Post[] }) {
                   {/* Icon / Category Thumbnail */}
                   <div className="w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-surface-container-low flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-all duration-500 shrink-0">
                     <span className="material-symbols-outlined text-lg md:text-3xl">
-                      {post.category === 'Buku' ? 'auto_stories' : post.category === 'Jurnal' ? 'science' : post.category === 'Opini' ? 'forum' : 'article'}
+                      {post.category === 'Berita' ? 'newspaper' : 'article'}
                     </span>
                   </div>
 

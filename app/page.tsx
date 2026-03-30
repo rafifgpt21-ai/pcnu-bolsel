@@ -5,9 +5,7 @@ import { getPosts } from '@/lib/actions/post';
 import HomeHero from '@/components/home/HomeHero';
 
 // Dynamically import components that are below the fold
-const ImpactMetrics = dynamic(() => import('@/components/home/ImpactMetrics'), {
-  ssr: true,
-});
+
 
 const ScrollReveal = dynamic(() => import('@/components/home/ScrollReveal'), {
   ssr: true,
@@ -22,17 +20,25 @@ export default async function Home() {
       {/* Hero Section */}
       <HomeHero />
 
-      {/* Impact Section */}
-      <ImpactMetrics />
 
-      {/* Content Section */}
+
+      {/* Content Section - News Hub */}
       <section id="arsip" className="w-full px-4 sm:px-8 md:px-12 lg:px-24 mx-auto py-32 bg-surface relative z-20">
         <ScrollReveal className="mb-20">
-          <span className="font-label text-xs font-bold tracking-[0.3em] text-secondary uppercase block mb-4">ARSIP INTELEKTUAL</span>
-          <h2 className="font-headline font-black text-4xl md:text-5xl lg:text-6xl text-primary leading-tight tracking-tighter">
-            Karya & <span className="text-secondary italic">Diskusi</span> Terbaru
-          </h2>
-          <div className="w-20 h-1.5 bg-secondary mt-8 rounded-full"></div>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-outline-variant/10 pb-12">
+            <div className="max-w-3xl">
+              <span className="font-label text-xs font-bold tracking-[0.4em] text-secondary uppercase block mb-6 px-4 py-1.5 bg-secondary/5 rounded-full w-fit border border-secondary/10">WARTA & INFORMASI</span>
+              <h2 className="font-headline font-black text-5xl md:text-6xl lg:text-7xl text-primary leading-[1.1] tracking-tighter">
+                Berita Terkini & <span className="text-secondary italic">Wawasan</span> Islam
+              </h2>
+            </div>
+            <div className="hidden md:block text-right">
+              <p className="text-on-surface-variant/60 font-label text-[10px] tracking-widest uppercase mb-2">Terakhir Diperbarui</p>
+              <p className="text-primary font-bold text-sm tracking-tight">
+                {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+            </div>
+          </div>
         </ScrollReveal>
 
         {latestPosts.length > 0 ? (
@@ -117,12 +123,34 @@ export default async function Home() {
           </div>
         ) : (
           <ScrollReveal>
-            <div className="text-center py-32 bg-surface-container-low rounded-[40px] border border-dashed border-outline-variant/30">
-              <div className="inline-flex w-24 h-24 items-center justify-center rounded-full bg-surface-container-highest mb-8 text-on-surface-variant/20">
-                <span className="material-symbols-outlined text-5xl">inventory_2</span>
+            <div className="relative overflow-hidden bg-surface-container-lowest/40 backdrop-blur-xl rounded-[3rem] border border-outline-variant/20 p-8 md:p-16 lg:p-24 shadow-2xl shadow-primary/5">
+              {/* Decorative Background for Empty State */}
+              <div className="absolute top-0 right-0 w-96 h-96 bg-secondary/5 blur-[100px] rounded-full -mr-48 -mt-48"></div>
+              <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 blur-[100px] rounded-full -ml-48 -mb-48"></div>
+              
+              <div className="relative z-10 flex flex-col items-center text-center">
+                <div className="relative mb-10 group">
+                  <div className="absolute inset-0 bg-secondary/20 blur-2xl rounded-full scale-50 group-hover:scale-100 transition-transform duration-1000"></div>
+                  <div className="relative w-24 h-24 md:w-32 md:h-32 flex items-center justify-center rounded-[2.5rem] bg-linear-to-br from-surface-container-highest to-surface-container border border-outline-variant/30 shadow-xl group-hover:rotate-12 transition-transform duration-700">
+                    <span className="material-symbols-outlined text-5xl md:text-6xl text-secondary select-none">news</span>
+                  </div>
+                </div>
+                
+                <h3 className="text-3xl md:text-4xl font-black text-primary mb-4 tracking-tighter leading-tight">
+                  Warta Baru Sedang <br className="sm:hidden" />
+                  <span className="text-secondary italic">Dipersiapkan</span>
+                </h3>
+                
+                <p className="text-on-surface-variant/70 text-lg md:text-xl max-w-xl mx-auto font-body leading-relaxed mb-12">
+                  Tim redaksi kami sedang merangkum informasi terkini dan artikel bermanfaat untuk Anda. Pantau terus halaman ini.
+                </p>
+                
+                <div className="flex flex-wrap justify-center gap-4 opacity-40 grayscale pointer-events-none select-none">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-1.5 w-12 md:w-20 bg-primary/20 rounded-full animate-pulse" style={{ animationDelay: `${i * 0.2}s` }}></div>
+                  ))}
+                </div>
               </div>
-              <h3 className="text-2xl font-black text-primary mb-2 tracking-tight">Belum Ada Karya</h3>
-              <p className="text-on-surface-variant/60 max-w-sm mx-auto">Kami sedang mempersiapkan konten intelektual terbaik untuk Anda.</p>
             </div>
           </ScrollReveal>
         )}
@@ -132,7 +160,7 @@ export default async function Home() {
              href="/explore" 
              className="inline-flex items-center gap-4 px-10 py-5 bg-primary text-on-primary rounded-full font-headline font-bold text-lg hover:bg-secondary transition-all duration-500 hover:shadow-xl hover:shadow-secondary/20 hover:-translate-y-1"
            >
-             Lihat Semua Karya
+             Jelajah Semua Berita
              <span className="material-symbols-outlined">grid_view</span>
            </Link>
         </ScrollReveal>

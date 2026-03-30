@@ -102,9 +102,7 @@ export default function HomeHero() {
             Bolaang Mongondow Selatan
           </span>
         </h1>
-        <p className="mt-8 text-on-surface-variant max-w-2xl mx-auto text-sm sm:text-base lg:text-lg font-body leading-relaxed px-4 opacity-80 group-hover:opacity-100 transition-opacity duration-700">
-          Menyebarkan nilai-nilai Islam Ahlussunnah wal Jama&apos;ah an-Nahdliyyah, merajut ukhuwah Islamiyah, Wathaniyah, dan Basyariyah di ujung selatan BMR.
-        </p>
+
       </motion.div>
 
       {/* Search Bar Area */}

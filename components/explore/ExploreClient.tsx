@@ -10,7 +10,7 @@ interface ExploreClientProps {
   initialPosts: any[];
 }
 
-const categories = ["Semua", "Warta", "Khazanah", "Opini", "Siyasah", "Riset", "Tokoh"];
+const categories = ["Semua", "Berita"];
 
 export default function ExploreClient({ initialPosts }: ExploreClientProps) {
   const router = useRouter();
@@ -63,12 +63,7 @@ export default function ExploreClient({ initialPosts }: ExploreClientProps) {
   const getIcon = (cat: string) => {
     switch (cat) {
       case "Semua": return "grid_view";
-      case "Warta": return "newspaper";
-      case "Khazanah": return "cognition";
-      case "Opini": return "chat";
-      case "Siyasah": return "account_balance";
-      case "Riset": return "biotech";
-      case "Tokoh": return "groups";
+      case "Berita": return "newspaper";
       default: return "category";
     }
   };
@@ -152,7 +147,7 @@ export default function ExploreClient({ initialPosts }: ExploreClientProps) {
                 onClick={() => handleFilter(cat)}
                 className={`group relative flex items-center gap-2 px-5 py-2 md:py-4 rounded-full transition-all duration-500 whitespace-nowrap
                   ${currentCategory === cat 
-                    ? "bg-primary text-on-primary shadow-lg shadow-primary/20 md:bg-primary" 
+                    ? "bg-primary text-on-primary md:bg-primary" 
                     : "text-on-surface-variant hover:text-primary md:bg-surface-container-low/40 md:backdrop-blur-3xl md:border md:border-outline-variant/10"
                   }`}
               >
