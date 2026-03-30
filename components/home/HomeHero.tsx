@@ -108,13 +108,8 @@ export default function HomeHero() {
       </motion.div>
 
       {/* Search Bar Area */}
-      <motion.div variants={item} className="w-full max-w-3xl px-4 z-20">
-        <div className="relative group/search">
-          <div className="absolute -inset-1 bg-linear-to-r from-primary/20 via-secondary/20 to-primary/20 blur-xl opacity-40 rounded-full group-hover/search:opacity-80 group-hover/search:blur-2xl transition duration-1000"></div>
-          <div className="relative bg-surface rounded-full shadow-2xl shadow-primary/10 ring-1 ring-outline-variant/30 hover:ring-primary/40 transition-all duration-500 hover:scale-[1.01]">
-             <HeroSearch />
-          </div>
-        </div>
+      <motion.div variants={item} className="w-full max-w-3xl px-4 z-20 flex justify-center">
+        <HeroSearch />
       </motion.div>
 
       {/* Primary CTA Scroll Down */}
