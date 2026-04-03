@@ -23,12 +23,12 @@ export default async function Home() {
 
 
       {/* Content Section - News Hub */}
-      <section id="arsip" className="w-full px-4 sm:px-8 md:px-12 lg:px-24 mx-auto py-32 bg-surface relative z-20">
+      <section id="arsip" className="w-full px-4 sm:px-8 md:px-12 lg:px-24 mx-auto py-16 md:py-32 bg-surface relative z-20">
         <ScrollReveal className="mb-20">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-outline-variant/10 pb-12">
             <div className="max-w-3xl">
               <span className="font-label text-xs font-bold tracking-[0.4em] text-secondary uppercase block mb-6 px-4 py-1.5 bg-secondary/5 rounded-full w-fit border border-secondary/10">WARTA & INFORMASI</span>
-              <h2 className="font-headline font-black text-5xl md:text-6xl lg:text-7xl text-primary leading-[1.1] tracking-tighter">
+              <h2 className="font-headline font-black text-4xl md:text-6xl lg:text-7xl text-primary leading-[1.1] tracking-tighter">
                 Berita Terkini & <span className="text-secondary italic">Wawasan</span> Islam
               </h2>
             </div>
@@ -55,7 +55,7 @@ export default async function Home() {
                 <ScrollReveal key={post.id} delay={index * 0.1}>
                   <Link
                     href={`/post/${post.slug}`}
-                    className="group relative flex flex-col sm:flex-row bg-surface-container-lowest/60 backdrop-blur-2xl rounded-[2.5rem] overflow-hidden border border-outline-variant/20 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/15 transition-all duration-700 hover:-translate-y-2 h-full"
+                    className="group relative flex flex-col sm:flex-row bg-surface-container-lowest/80 sm:bg-surface-container-lowest/60 sm:backdrop-blur-2xl rounded-[2.5rem] overflow-hidden border border-outline-variant/20 hover:border-primary/30 transition-all duration-300 h-full"
                   >
                     {/* Inner Glow */}
                     <div className="absolute inset-0 rounded-[2.5rem] ring-1 ring-inset ring-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-20 pointer-events-none"></div>
@@ -105,7 +105,7 @@ export default async function Home() {
                           alt={post.title}
                           fill
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          className="object-cover group-hover:scale-110 transition-transform duration-1000 ease-out grayscale-20 group-hover:grayscale-0"
+                          className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                           priority={index < 2} // Prioritize first two images for LCP
                         />
                       ) : (
@@ -166,16 +166,15 @@ export default async function Home() {
         </ScrollReveal>
       </section>
 
-      {/* Featured Quote Section - KH Hasyim Asyari */}
-      <section className="w-full py-32 bg-surface relative overflow-hidden">
+      <section className="w-full py-16 md:py-32 bg-surface relative overflow-hidden">
         {/* Dynamic Abstract Background Elements */}
-        <div className="absolute inset-0 opacity-40">
-           <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[80vw] max-w-[600px] h-[80vw] max-h-[600px] bg-primary/20 blur-[130px] rounded-full mix-blend-multiply pointer-events-none"></div>
-           <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[70vw] max-w-[500px] h-[70vw] max-h-[500px] bg-secondary/20 blur-[100px] rounded-full mix-blend-multiply pointer-events-none"></div>
+        <div className="absolute inset-0 opacity-20 md:opacity-40">
+           <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[80vw] max-w-[600px] h-[80vw] max-h-[600px] bg-primary/20 md:blur-[130px] blur-[60px] rounded-full mix-blend-multiply pointer-events-none"></div>
+           <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[70vw] max-w-[500px] h-[70vw] max-h-[500px] bg-secondary/20 md:blur-[100px] blur-[50px] rounded-full mix-blend-multiply pointer-events-none"></div>
         </div>
 
         <div className="max-w-5xl mx-auto px-4 sm:px-8 relative z-10">
-          <ScrollReveal className="relative bg-surface-container-lowest/60 backdrop-blur-2xl rounded-[2.5rem] md:rounded-[3.5rem] p-8 md:p-14 lg:p-20 border border-outline-variant/20 shadow-2xl shadow-primary/5 text-center group overflow-hidden">
+          <ScrollReveal className="relative bg-surface-container-lowest/80 sm:bg-surface-container-lowest/60 sm:backdrop-blur-2xl rounded-[2.5rem] md:rounded-[3.5rem] p-8 md:p-14 lg:p-20 border border-outline-variant/20 shadow-xl shadow-primary/5 text-center group overflow-hidden">
             <span className="material-symbols-outlined text-secondary text-8xl md:text-[10rem] mb-0 opacity-10 absolute top-0 w-full left-0 text-center -z-10 group-hover:scale-110 transition-transform duration-1000">format_quote</span>
             <div className="inline-flex w-20 h-20 rounded-full bg-primary/5 items-center justify-center mb-8 border border-primary/10 group-hover:bg-primary/10 transition-colors">
                <span className="material-symbols-outlined text-secondary text-4xl drop-shadow-sm">auto_awesome</span>

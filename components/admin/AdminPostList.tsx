@@ -299,6 +299,15 @@ export function AdminPostList({ initialPosts }: { initialPosts: Post[] }) {
                     {/* Action Buttons */}
                     <div className="flex items-center gap-1 md:gap-2">
                        <Link
+                        href={`/post/${post.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-surface-container-low text-on-surface-variant hover:bg-secondary hover:text-on-secondary transition-all duration-500 shadow-sm"
+                        title="Lihat Pratinjau"
+                      >
+                        <span className="material-symbols-outlined text-sm md:text-lg">visibility</span>
+                      </Link>
+                       <Link
                         href={`/admin/post/${post.id}`}
                         className="w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-surface-container-low text-on-surface-variant hover:bg-primary hover:text-on-primary transition-all duration-500 shadow-sm"
                         title="Edit Konten"

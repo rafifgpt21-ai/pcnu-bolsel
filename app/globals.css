@@ -155,3 +155,58 @@ html.lenis body {
 .pulse-green {
   animation: pulse-green 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
 }
+
+/* Optimized for low-end mobile devices */
+@layer utilities {
+  @media (max-width: 768px) {
+    .glass-effect, 
+    [class*="backdrop-blur"] {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+    
+    [class*="blur-["] {
+      filter: none !important;
+    }
+
+    [class*="shadow-2xl"] {
+      box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Disable complex transitions on mobile */
+    .transition-all {
+      transition-property: opacity, transform, background-color, border-color !important;
+    }
+  }
+}
+
+/* Reduced Motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+}
+
+/* Base fade-in for non-motion elements */
+.animate-in {
+  animation-fill-mode: both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-from-bottom {
+  from { transform: translateY(1rem); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-[fade-in] { animation: fade-in 1s ease-out; }
+.animate-[slide-in-from-bottom] { animation: slide-in-from-bottom 0.8s ease-out; }

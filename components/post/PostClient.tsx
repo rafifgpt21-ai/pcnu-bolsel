@@ -157,7 +157,7 @@ export default function PostClient({ post, relatedPosts }: PostClientProps) {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-100px" }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
-                    className="prose prose-lg md:prose-xl max-w-none text-on-surface leading-[1.8] font-serif
+                    className="prose prose-lg md:prose-xl max-w-none text-on-surface leading-[1.8] font-body
                       prose-headings:font-headline prose-headings:text-primary prose-headings:tracking-tight
                       prose-h2:text-3xl prose-h2:mt-16 prose-h2:mb-8
                       prose-p:mb-8 prose-p:text-on-surface/90

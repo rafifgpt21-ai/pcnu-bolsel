@@ -24,6 +24,13 @@ function LenisRoot({ children }: { children: React.ReactNode }) {
 }
 
 export function LenisProvider({ children }: { children: React.ReactNode }) {
+  // Detect if we are on mobile to disable Lenis for better performance
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
+  if (isMobile) {
+    return <>{children}</>;
+  }
+
   return (
     <ReactLenis root options={{ lerp: 0.1, duration: 1.5, smoothWheel: true }}>
       <LenisRoot>

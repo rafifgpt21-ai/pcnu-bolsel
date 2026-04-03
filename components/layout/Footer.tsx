@@ -34,16 +34,14 @@ export const Footer = () => {
             </p>
             <div className="flex gap-4 pt-2">
               {socialLinks.map((social) => (
-                <motion.a
+                <a
                   key={social.name}
                   href={social.href}
-                  whileHover={{ y: -3, scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#fcf8fa]/70 hover:bg-[#016E45] hover:text-white hover:border-[#016E45] transition-all duration-300"
+                  className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#fcf8fa]/70 hover:bg-[#016E45] hover:text-white hover:border-[#016E45] hover:-translate-y-1 transition-all duration-300"
                   aria-label={social.name}
                 >
                   {social.icon}
-                </motion.a>
+                </a>
               ))}
             </div>
           </div>

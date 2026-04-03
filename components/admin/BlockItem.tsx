@@ -67,7 +67,7 @@ export const BlockItem = memo(({
         </span>
 
         {/* Action pills */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-surface-container-lowest border border-outline-variant/20 shadow-sm rounded-full px-1 py-1 z-10 pointer-events-auto">
+        <div className="flex items-center gap-1 bg-surface-container-lowest border border-outline-variant/20 shadow-sm rounded-full px-1 py-1 z-10 pointer-events-auto">
           <button
             type="button"
             onClick={() => onMove(index, 'up')}
