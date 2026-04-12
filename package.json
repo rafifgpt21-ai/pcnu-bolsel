@@ -9,6 +9,7 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "seed": "npx tsx scripts/seed-admin.ts",
+    "seed:pcnu": "npx tsx scripts/seed-pcnu.ts",
     "seed:posts": "npx tsx scripts/seed-posts.ts",
     "delete:posts": "npx tsx scripts/delete-all-posts.ts"
   },
