@@ -12,5 +12,5 @@ export default async function NewPostPage() {
     redirect("/");
   }
 
-  return <PostEditor />;
+  return <PostEditor currentUser={{ name: session.user.name || "Redaksi PCNU", role: session.user.role }} />;
 }

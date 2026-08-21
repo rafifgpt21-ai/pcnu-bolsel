@@ -1,44 +1,46 @@
-import { getPostBySlug, getPosts } from "@/lib/actions/post";
-import { notFound } from "next/navigation";
-import { auth } from "@/auth";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import PostClient from "@/components/post/PostClient";
+import { getPostBySlug, getPublishedPosts } from "@/lib/actions/post";
+
+export const revalidate = 60;
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pcnubolsel.or.id";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
-  const session = await auth();
-  const role = session?.user?.role;
-  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
-
-  if (!post || (post.status !== "Published" && !isAdmin)) {
-    return { title: "Post Not Found" };
-  }
-
+  if (!post) return { title: "Artikel tidak ditemukan | PCNU Bolsel", robots: { index: false, follow: false } };
+  const title = post.seoTitle || post.title;
+  const description = post.seoDescription || post.excerpt;
+  const canonical = `${siteUrl}/post/${post.slug}`;
+  const images = [post.thumbnail || `${siteUrl}/brand/pcnu-bolsel-favicon.png`];
   return {
-    title: `${post.title} | BRH Intellectual Platform`,
-    description: post.blocks.find(b => b.type === 'text')?.content?.replace(/<[^>]*>/g, '').slice(0, 160) || `Baca selengkapnya tentang ${post.title}`,
-    openGraph: {
-      title: post.title,
-      description: `Penelitian dan Artikel: ${post.title}`,
-      images: post.thumbnail ? [post.thumbnail] : [],
-    },
+    title: `${title} | PCNU Bolsel`,
+    description,
+    authors: [{ name: post.authorName }],
+    alternates: { canonical },
+    openGraph: { type: "article", locale: "id_ID", siteName: "PCNU Bolsel", url: canonical, title, description, publishedTime: post.publishedAt, modifiedTime: post.updatedAt, authors: [post.authorName], tags: post.tags, images },
+    twitter: { card: "summary_large_image", title, description, images },
   };
 }
 
 export default async function SinglePostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
-  const session = await auth();
-  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
-
-  if (!post || (post.status !== "Published" && !isAdmin)) {
-    notFound();
-  }
-
-  // Fetch related posts (same category)
-  const allPosts = await getPosts({ status: 'Published', category: post.category });
-  const relatedPosts = (allPosts as any[]).filter((p: any) => p.id !== post.id).slice(0, 3);
-
-  return <PostClient post={post} relatedPosts={relatedPosts} />;
+  if (!post) notFound();
+  const allPosts = await getPublishedPosts();
+  const relatedPosts = allPosts
+    .filter((candidate) => candidate.id !== post.id)
+    .map((candidate) => ({ candidate, score: Number(candidate.category === post.category) * 2 + candidate.tags.filter((tag) => post.tags.includes(tag)).length }))
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(({ candidate }) => candidate);
+  const jsonLd = {
+    "@context": "https://schema.org", "@type": "NewsArticle", headline: post.title, description: post.excerpt,
+    image: post.thumbnail ? [post.thumbnail] : undefined, datePublished: post.publishedAt, dateModified: post.updatedAt,
+    mainEntityOfPage: `${siteUrl}/post/${post.slug}`, author: { "@type": "Person", name: post.authorName },
+    publisher: { "@type": "Organization", name: "PCNU Bolaang Mongondow Selatan", logo: { "@type": "ImageObject", url: `${siteUrl}/brand/pcnu-bolsel-favicon.png` } },
+  };
+  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} /><PostClient post={post} relatedPosts={relatedPosts} /></>;
 }

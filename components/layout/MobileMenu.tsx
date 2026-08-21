@@ -58,7 +58,8 @@ export const MobileMenu = ({ isAdmin }: MobileMenuProps) => {
         <div className="flex flex-col h-full p-8 pt-24 bg-white relative">
           <button
             onClick={() => setIsOpen(false)}
-            className="absolute top-6 right-6 p-2 text-slate-900/30 hover:text-slate-900 transition-colors duration-300"
+            className="absolute top-6 right-6 grid size-11 place-items-center rounded-xl text-slate-900/30 hover:text-slate-900 transition-colors duration-300"
+            aria-label="Tutup menu"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
           </button>
@@ -74,7 +75,7 @@ export const MobileMenu = ({ isAdmin }: MobileMenuProps) => {
                   style={{
                     transitionDelay: isOpen ? `${150 + i * 80}ms` : '0ms',
                   }}
-                  className={`block text-3xl font-headline font-bold tracking-tighter transition-all duration-500 ease-out ${isActive
+                  className={`flex min-h-11 items-center text-3xl font-headline font-bold tracking-tighter transition-all duration-500 ease-out ${isActive
                       ? "text-[#016E45] translate-x-2"
                       : "text-slate-900/70 hover:text-[#016E45] hover:translate-x-1"
                     } ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95'}`}
@@ -111,7 +112,7 @@ export const MobileMenu = ({ isAdmin }: MobileMenuProps) => {
       {/* Hamburger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative z-110 p-2 text-[#0F172A] hover:bg-black/5 rounded-xl transition-all duration-300 active:scale-95 touch-none"
+        className="relative z-110 grid size-11 place-items-center text-[#0F172A] hover:bg-black/5 rounded-xl transition-all duration-300 active:scale-95 touch-none"
         aria-label="Toggle menu"
       >
         <div className="w-6 h-5 flex flex-col justify-between items-center relative">

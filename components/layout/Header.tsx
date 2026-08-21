@@ -14,7 +14,7 @@ export const Header = async () => {
         <div className="flex items-center gap-4">
           <MobileMenu isAdmin={isAdmin} />
           <div className="text-xl font-bold tracking-tighter text-[#0F172A] font-headline">
-            <Link href="/">PCNU Bolsel</Link>
+            <Link href="/" className="flex min-h-11 items-center">PCNU Bolsel</Link>
           </div>
         </div>
         
@@ -55,7 +55,7 @@ export const Header = async () => {
               </div>
             </details>
           ) : (
-            <Link href="/admin/login" className="text-[#016E45] font-headline font-medium px-6 py-2 rounded-xl hover:bg-secondary/5 transition-all text-sm sm:text-base">
+            <Link href="/admin/login" className="inline-flex min-h-11 items-center text-[#016E45] font-headline font-medium px-6 py-2 rounded-xl hover:bg-secondary/5 transition-all text-sm sm:text-base">
               Masuk
             </Link>
           )}

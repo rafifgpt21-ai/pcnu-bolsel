@@ -1,11 +1,11 @@
 import 'dotenv/config'
-import { PrismaClient } from '../app/generated/prisma/client'
+import { PostStatus, PrismaClient } from '../app/generated/prisma/client'
 import { randomUUID } from 'crypto'
 
 const prisma = new PrismaClient()
 
 const categories = ['Berita']
-const statuses = ['Published', 'Draft']
+const statuses = [PostStatus.PUBLISHED, PostStatus.DRAFT]
 
 const themes = [
   'PCNU Bolsel', 'Kegiatan MWC', 'Pengajian Rutin', 'Lailatul Ijtima', 

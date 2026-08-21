@@ -16,6 +16,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://pcnubolsel.or.id"),
   title: "PCNU Bolsel - Portal Berita Resmi",
   description: "Portal Berita Resmi Nahdlatul Ulama Bolaang Mongondow Selatan",
 };

@@ -108,7 +108,7 @@ async function main() {
         title: item.title,
         slug,
         category: item.category,
-        status: 'Published',
+        status: 'PUBLISHED',
         thumbnail: item.thumbnail,
         blocks: [
           {

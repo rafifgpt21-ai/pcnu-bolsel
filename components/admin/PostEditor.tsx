@@ -1,1077 +1,459 @@
-'use client';
+"use client";
 
-import { useState, useTransition, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { BlockItem } from './BlockItem';
-import { savePost } from '@/lib/actions/post';
-import { uploadFiles } from '@/lib/uploadthing';
-import { deleteFilesFromStorage } from '@/lib/uploadthing-server';
-import { deletePost } from '@/lib/actions/post';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useCallback } from 'react';
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  autosavePostDraft,
+  cancelScheduledPost,
+  deletePostPermanently,
+  publishPost,
+  restorePostRevision,
+  returnPostToDraft,
+  savePostDraft,
+  schedulePost,
+  submitPostForReview,
+  unpublishPost,
+} from "@/lib/actions/post";
+import { compressImage, formatFileSize } from "@/lib/image-compression";
+import { uploadFiles } from "@/lib/uploadthing";
+import { BlockItem } from "./BlockItem";
+import { deriveExcerpt } from "@/lib/posts/domain";
+import { editorContentFingerprint, parseLocalDraft, shouldOfferLocalRecovery, shouldSaveEditorDraft } from "@/lib/posts/local-draft";
+import {
+  POST_CATEGORIES,
+  POST_STATUS_LABELS,
+  type ActionResult,
+  type PostBlock,
+  type PostBlockType,
+  type PostEditorData,
+  type PostEditorInput,
+  type PostStatusValue,
+  type UploadReceipt,
+} from "@/lib/posts/types";
 
-type Block = {
-  id: string;
-  type: 'text' | 'image' | 'video' | 'pdf' | 'link';
-  content: string;
-  url?: string;
-  title?: string;
-  caption?: string;
-  isLocked?: boolean;
+type Props = {
+  initialData?: PostEditorData;
+  currentUser: { name: string; role: "ADMIN" | "SUPER_ADMIN" };
 };
 
-const CATEGORIES = ['Berita'];
+type Sheet = "metadata" | "seo" | "history" | "actions" | null;
+type SaveState = "idle" | "local" | "saving" | "saved" | "offline" | "conflict" | "error";
 
-export const PostEditor = ({ initialData }: { initialData?: any }) => {
+const emptyBlock = (type: PostBlockType): PostBlock => ({
+  id: crypto.randomUUID(),
+  type,
+  content: "",
+  url: "",
+  title: "",
+  caption: "",
+  altText: "",
+});
+
+function dateTimeLocal(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(value));
+}
+
+function meaningful(input: PostEditorInput) {
+  return Boolean(input.title.trim() || input.excerpt?.trim() || input.blocks.some((block) => block.content.trim() || block.url?.trim()));
+}
+
+function useBottomSheet(open: boolean, close: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusable = () => Array.from(ref.current?.querySelectorAll<HTMLElement>("button, input, textarea, select, a[href], [tabindex]:not([tabindex='-1'])") || []).filter((item) => !item.hasAttribute("disabled"));
+    focusable()[0]?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener("keydown", onKey); };
+  }, [open, close]);
+  return ref;
+}
+
+function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+  return <label className="block space-y-1.5"><span className="text-xs font-bold uppercase tracking-[0.12em] text-on-surface-variant">{label}</span>{children}{hint && <span className="block text-xs text-on-surface-variant/70">{hint}</span>}</label>;
+}
+
+export function PostEditor({ initialData, currentUser }: Props) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [title, setTitle] = useState(initialData?.title || '');
-  const [category, setCategory] = useState(initialData?.category || 'Berita');
-  const [thumbnail, setThumbnail] = useState(initialData?.thumbnail || '');
-  const [blocks, setBlocks] = useState<Block[]>(() =>
-    initialData?.blocks ? JSON.parse(JSON.stringify(initialData.blocks)) : []
-  );
-  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
-  const [isMobileMetaOpen, setIsMobileMetaOpen] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [blockToDelete, setBlockToDelete] = useState<string | null>(null);
-  const [showUnsavedConfirm, setShowUnsavedConfirm] = useState(false);
-  const [pendingPath, setPendingPath] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const blockFileInputRef = useRef<HTMLInputElement>(null);
-  const [activeBlockTarget, setActiveBlockTarget] = useState<string | null>(null);
-
-  // New states for deferred uploads
-  const [stagedFiles, setStagedFiles] = useState<Record<string, File>>({});
+  const [postId, setPostId] = useState(initialData?.id);
+  const [version, setVersion] = useState(initialData?.version ?? 0);
+  const [status, setStatus] = useState<PostStatusValue>(initialData?.status ?? "DRAFT");
+  const [title, setTitle] = useState(initialData?.title ?? "");
+  const [slug, setSlug] = useState(initialData?.slug ?? "");
+  const [excerpt, setExcerpt] = useState(initialData?.excerpt ?? "");
+  const [category, setCategory] = useState(initialData?.category ?? "Berita");
+  const [tagsText, setTagsText] = useState((initialData?.tags ?? []).join(", "));
+  const [thumbnail, setThumbnail] = useState(initialData?.thumbnail ?? "");
+  const [authorName, setAuthorName] = useState(initialData?.authorName ?? currentUser.name);
+  const [sourceTitle, setSourceTitle] = useState(initialData?.sourceTitle ?? "");
+  const [sourceUrl, setSourceUrl] = useState(initialData?.sourceUrl ?? "");
+  const [publishedAt, setPublishedAt] = useState(dateTimeLocal(initialData?.publishedAt));
+  const [scheduledAt, setScheduledAt] = useState(dateTimeLocal(initialData?.scheduledAt));
+  const [blocks, setBlocks] = useState<PostBlock[]>(initialData?.blocks ?? []);
+  const [revisions] = useState(initialData?.revisions ?? []);
+  const [activities] = useState(initialData?.activities ?? []);
+  const [receipts, setReceipts] = useState<UploadReceipt[]>([]);
   const [previews, setPreviews] = useState<Record<string, string>>({});
-  const [saveStatus, setSaveStatus] = useState<'Idle' | 'Uploading' | 'Saving' | 'Success' | 'Error'>('Idle');
-  const [isSavingInProgress, setIsSavingInProgress] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [stagedFiles, setStagedFiles] = useState<Record<string, File>>({});
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [deletingBlock, setDeletingBlock] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [savedAt, setSavedAt] = useState<string | null>(initialData?.updatedAt ?? null);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [sheet, setSheet] = useState<Sheet>(null);
+  const [completionDialog, setCompletionDialog] = useState<"draft" | "published" | null>(null);
+  const [desktopTab, setDesktopTab] = useState<Exclude<Sheet, "actions" | null>>("metadata");
+  const [recovery, setRecovery] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [activeFileTarget, setActiveFileTarget] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const lastServerSave = useRef(0);
+  const autosaveInFlight = useRef(false);
+  const hasEditorInteraction = useRef(false);
 
-  const isDirty =
-    title !== (initialData?.title || '') ||
-    category !== (initialData?.category || 'Berita') ||
-    thumbnail !== (initialData?.thumbnail || '') ||
-    Object.keys(stagedFiles).length > 0 ||
-    JSON.stringify(blocks.map(b => ({ ...b, id: b.id }))) !== JSON.stringify((initialData?.blocks || []).map((b: any) => ({ ...b, id: b.id })));
+  const isSuper = currentUser.role === "SUPER_ADMIN";
+  const locked = !isSuper && (status === "IN_REVIEW" || status === "SCHEDULED" || status === "ARCHIVED");
+  const live = initialData?.isLive || status === "PUBLISHED";
+  const tags = useMemo(() => tagsText.split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 10), [tagsText]);
+  const effectiveExcerpt = useMemo(() => excerpt.trim() || deriveExcerpt(blocks), [blocks, excerpt]);
+  const payload = useMemo<PostEditorInput>(() => ({
+    id: postId,
+    expectedVersion: postId ? version : undefined,
+    title,
+    slug,
+    excerpt,
+    category,
+    tags,
+    thumbnail,
+    authorName,
+    sourceTitle,
+    sourceUrl,
+    seoTitle: "",
+    seoDescription: "",
+    publishedAt: publishedAt ? new Date(publishedAt).toISOString() : undefined,
+    blocks,
+    newUploads: receipts,
+  }), [postId, version, title, slug, excerpt, category, tags, thumbnail, authorName, sourceTitle, sourceUrl, publishedAt, blocks, receipts]);
+  const fingerprint = useMemo(() => editorContentFingerprint(payload), [payload]);
+  const initialServerPayload = useRef(payload);
+  const lastServerFingerprint = useRef(fingerprint);
+  const localKey = `pcnu:post-draft:${postId || "new"}`;
+
+  const closeSheet = useCallback(() => setSheet(null), []);
+  const sheetRef = useBottomSheet(Boolean(sheet), closeSheet);
+  const closeCompletionDialog = useCallback(() => setCompletionDialog(null), []);
+  const completionDialogRef = useBottomSheet(Boolean(completionDialog), closeCompletionDialog);
+
+  const applyIdentity = useCallback((data: { id: string; version: number; status?: PostStatusValue; savedAt?: string; slug?: string }) => {
+    setPostId(data.id);
+    setVersion(data.version);
+    if (data.status) setStatus(data.status);
+    if (data.savedAt) setSavedAt(data.savedAt);
+    if (data.slug) setSlug(data.slug);
+    if (!initialData?.id) window.history.replaceState(null, "", `/admin/post/${data.id}`);
+    setReceipts([]);
+  }, [initialData?.id]);
 
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isDirty]);
+    const raw = localStorage.getItem(localKey);
+    if (!raw) return;
+    const parsed = parseLocalDraft(raw);
+    if (parsed && shouldOfferLocalRecovery(parsed, initialData?.updatedAt, initialServerPayload.current)) setRecovery(raw);
+    else localStorage.removeItem(localKey);
+  }, [initialData?.id, initialData?.updatedAt, localKey]);
 
   useEffect(() => {
-    const handleAnchorClick = (e: MouseEvent) => {
-      if (!isDirty) return;
-      const target = e.target as HTMLElement;
-      const anchor = target.closest('a');
+    if (!shouldSaveEditorDraft(hasEditorInteraction.current, fingerprint, lastServerFingerprint.current) || !meaningful(payload) || locked) return;
+    const timer = window.setTimeout(() => {
+      localStorage.setItem(localKey, JSON.stringify({ savedAt: new Date().toISOString(), data: payload }));
+      setSaveState((state) => state === "saving" ? state : navigator.onLine ? "local" : "offline");
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [fingerprint, localKey, locked, payload]);
 
-      if (anchor instanceof HTMLAnchorElement) {
-        const href = anchor.getAttribute('href');
-        // If it's an internal link
-        if (href && (href.startsWith('/') || href.startsWith(window.location.origin))) {
-          e.preventDefault();
-          e.stopPropagation();
-          setPendingPath(href);
-          setShowUnsavedConfirm(true);
-        }
-      }
-    };
-
-    document.addEventListener('click', handleAnchorClick, true);
-    return () => document.removeEventListener('click', handleAnchorClick, true);
-  }, [isDirty]);
-
-  const handleBack = () => {
-    if (isDirty) {
-      setPendingPath('/admin');
-      setShowUnsavedConfirm(true);
-    } else {
-      router.push('/admin');
-    }
-  };
-
-
-  const handleThumbnailClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const onThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (previews.thumbnail) URL.revokeObjectURL(previews.thumbnail);
-      setStagedFiles(prev => ({ ...prev, thumbnail: file }));
-      const objectUrl = URL.createObjectURL(file);
-      setPreviews(prev => ({ ...prev, thumbnail: objectUrl }));
-    }
-  };
-
-  const onBlockFileChange = useCallback((blockId: string, file: File) => {
-    setPreviews(prev => {
-      if (prev[blockId]) URL.revokeObjectURL(prev[blockId]);
-      const objectUrl = URL.createObjectURL(file);
-      return { ...prev, [blockId]: objectUrl };
-    });
-    setStagedFiles(prev => ({ ...prev, [blockId]: file }));
-  }, []);
-
-  const onBlockFileSelect = useCallback((blockId: string) => {
-    const block = blocks.find(b => b.id === blockId);
-    if (blockFileInputRef.current) {
-      blockFileInputRef.current.accept = block?.type === 'image' ? 'image/*' : 'application/pdf';
-    }
-    setActiveBlockTarget(blockId);
-    blockFileInputRef.current?.click();
-  }, [blocks]);
-
-  const handleBlockFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && activeBlockTarget) {
-      onBlockFileChange(activeBlockTarget, file);
-      e.target.value = ''; // Reset for same file selection
-    }
-  }, [activeBlockTarget, onBlockFileChange]);
-
-  // Consolidated Revocation Effect
   useEffect(() => {
-    return () => {
-      Object.values(previews).forEach(url => {
-        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-      });
-    };
-  }, [previews]);
+    if (!shouldSaveEditorDraft(hasEditorInteraction.current, fingerprint, lastServerFingerprint.current) || !meaningful(payload) || locked || busy || uploading || autosaveInFlight.current || saveState === "saving" || saveState === "conflict") return;
+    const elapsed = Date.now() - lastServerSave.current;
+    const timer = window.setTimeout(async () => {
+      if (!navigator.onLine) { setSaveState("offline"); return; }
+      if (autosaveInFlight.current) return;
+      autosaveInFlight.current = true;
+      lastServerSave.current = Date.now();
+      setSaveState("saving");
+      try {
+        const result = await autosavePostDraft(payload);
+        if (result.success) {
+          if (!postId) localStorage.removeItem("pcnu:post-draft:new");
+          applyIdentity(result.data);
+          lastServerFingerprint.current = fingerprint;
+          setSaveState("saved");
+        } else if (result.code === "CONFLICT") {
+          setRecovery(null);
+          setError("");
+          setSaveState("conflict");
+        } else {
+          setError(result.error);
+          setSaveState("error");
+        }
+      } finally {
+        autosaveInFlight.current = false;
+      }
+    }, Math.max(3000, 10_000 - elapsed));
+    return () => window.clearTimeout(timer);
+  }, [applyIdentity, busy, fingerprint, locked, payload, postId, saveState, uploading]);
 
-  const addBlock = (type: Block['type']) => {
-    const newBlock: Block = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      content: '',
-      url: '',
-      isLocked: false,
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (fingerprint !== lastServerFingerprint.current && meaningful(payload)) { event.preventDefault(); event.returnValue = ""; }
     };
-    setBlocks((prev) => [...prev, newBlock]);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [fingerprint, payload]);
+
+  useEffect(() => () => Object.values(previews).forEach((url) => URL.revokeObjectURL(url)), [previews]);
+
+  const restoreLocal = () => {
+    if (!recovery) return;
+    const data = parseLocalDraft(recovery)?.data;
+    if (!data) { setRecovery(null); return; }
+    setTitle(data.title); setSlug(data.slug || ""); setExcerpt(data.excerpt || ""); setCategory(data.category);
+    setTagsText(data.tags.join(", ")); setThumbnail(data.thumbnail || ""); setAuthorName(data.authorName);
+    setSourceTitle(data.sourceTitle || ""); setSourceUrl(data.sourceUrl || "");
+    setPublishedAt(dateTimeLocal(data.publishedAt)); setBlocks(data.blocks); setRecovery(null);
+    setMessage("Draft lokal dipulihkan. Periksa isinya sebelum menyimpan.");
   };
 
-  const moveBlock = useCallback((index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index === 0) return;
-    const currentBlocks = [...blocks]; // Need latest blocks, but to keep stable we can use functional update if possible
-    setBlocks((prev) => {
-      if (direction === 'up' && index === 0) return prev;
-      if (direction === 'down' && index === prev.length - 1) return prev;
-      const newBlocks = [...prev];
-      const swapIndex = direction === 'up' ? index - 1 : index + 1;
-      [newBlocks[index], newBlocks[swapIndex]] = [newBlocks[swapIndex], newBlocks[index]];
-      return newBlocks;
-    });
-  }, []);
+  const updateBlock = useCallback((id: string, update: Partial<PostBlock>) => setBlocks((items) => items.map((block) => block.id === id ? { ...block, ...update } : block)), []);
+  const moveBlock = useCallback((index: number, direction: "up" | "down") => setBlocks((items) => {
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= items.length) return items;
+    const next = [...items]; [next[index], next[target]] = [next[target], next[index]]; return next;
+  }), []);
+  const dropBlock = (target: number) => {
+    if (dragIndex === null || dragIndex === target) return;
+    setBlocks((items) => { const next = [...items]; const [moved] = next.splice(dragIndex, 1); next.splice(target, 0, moved); return next; });
+    setDragIndex(null);
+  };
+  const insertBlock = (type: PostBlockType, after = blocks.length - 1) => setBlocks((items) => [...items.slice(0, after + 1), emptyBlock(type), ...items.slice(after + 1)]);
 
-  const updateBlock = useCallback((id: string, data: Partial<Block>) => {
-    setBlocks((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, ...data } : b))
-    );
-  }, []);
-
-  const removeBlock = useCallback((id: string) => {
-    setBlocks((prev) => {
-      const block = prev.find((b) => b.id === id);
-      if (!block) return prev;
-      
-      const isEmpty = block.type === 'text'
-        ? (!block.content || block.content.replace(/<[^>]*>/g, '').trim() === '')
-        : (!block.url && !block.title && !block.caption && !stagedFiles[id]);
-
-      if (isEmpty) {
-        // Cleanup side effects
-        if (stagedFiles[id]) {
-          setStagedFiles(s => {
-            const next = { ...s };
-            delete next[id];
-            return next;
-          });
-        }
-        if (previews[id]) {
-          URL.revokeObjectURL(previews[id]);
-          setPreviews(p => {
-            const next = { ...p };
-            delete next[id];
-            return next;
-          });
-        }
-        return prev.filter((b) => b.id !== id);
-      }
-      
-      setBlockToDelete(id);
-      return prev;
-    });
-  }, [stagedFiles, previews]); // Dependencies might cause re-renders of all blocks if not careful
-
-  const confirmRemoveBlock = useCallback((id: string) => {
-    setBlocks((prev) => prev.filter((b) => b.id !== id));
-    setBlockToDelete(null);
-    
-    if (stagedFiles[id]) {
-      setStagedFiles(s => {
-        const next = { ...s };
-        delete next[id];
-        return next;
-      });
-    }
-    if (previews[id]) {
-      URL.revokeObjectURL(previews[id]);
-      setPreviews(p => {
-        const next = { ...p };
-        delete next[id];
-        return next;
-      });
-    }
-  }, [stagedFiles, previews]);
-
-  const handleSave = async (status: 'Published' | 'Draft') => {
-    if (!title.trim()) {
-      alert('Judul tidak boleh kosong!');
-      return;
-    }
-
-    setIsSavingInProgress(true);
-    setSaveStatus('Uploading');
-
-    // We don't necessarily need startTransition if we manage our own isSavingInProgress
+  const upload = async (target: string, original: File) => {
+    const block = blocks.find((item) => item.id === target);
+    const isImage = target === "thumbnail" || block?.type === "image";
+    if (!isImage && original.type !== "application/pdf") { setError("Gunakan file PDF yang valid."); return; }
+    if (!isImage && original.size > 16 * 1024 * 1024) { setError("Ukuran PDF maksimal 16 MB."); return; }
+    setError(""); setUploading(target);
+    let file = original;
     try {
-      let finalThumbnail = thumbnail;
-      let finalBlocks = [...blocks];
-
-      // 1. Upload staged files
-      const filesToUpload = Object.entries(stagedFiles);
-      if (filesToUpload.length > 0) {
-        const endpointsMapping = filesToUpload.map(([key, file]) => {
-          if (key === 'thumbnail') return 'imageUploader';
-          const block = blocks.find(b => b.id === key);
-          return block?.type === 'pdf' ? 'pdfUploader' : 'imageUploader' as const;
-        });
-
-        // Upload in batch
-        // Note: uploadFiles expects an array of files and an endpoint.
-        // Since we might have different endpoints, we grouped them logic-wise.
-        // But for simplicity and because UploadThing handles files, we can just loop or batch by endpoint.
-
-        // Group by endpoint
-        const byEndpoint: Record<string, { keys: string[], files: File[] }> = {
-          imageUploader: { keys: [], files: [] },
-          pdfUploader: { keys: [], files: [] }
-        };
-
-        filesToUpload.forEach(([key, file], index) => {
-          const endpoint = endpointsMapping[index];
-          byEndpoint[endpoint].keys.push(key);
-          byEndpoint[endpoint].files.push(file);
-        });
-
-        for (const [endpoint, data] of Object.entries(byEndpoint)) {
-          if (data.files.length > 0) {
-            const res = await uploadFiles(endpoint as any, {
-              files: data.files,
-            });
-
-            // Apply the new URLs back
-            res.forEach((uploadedFile, i) => {
-              const key = data.keys[i];
-              const newUrl = uploadedFile.ufsUrl || uploadedFile.url;
-              if (key === 'thumbnail') {
-                finalThumbnail = newUrl;
-              } else {
-                finalBlocks = finalBlocks.map(b => b.id === key ? { ...b, url: newUrl } : b);
-              }
-            });
-          }
-        }
+      if (isImage) {
+        const compressed = await compressImage(original, target === "thumbnail" ? "thumbnail" : "content");
+        file = compressed.file;
+        setMessage(`Gambar dikompresi menjadi ${formatFileSize(file.size)} (${compressed.savedPercent}% lebih kecil).`);
       }
+      const objectUrl = URL.createObjectURL(file);
+      setPreviews((current) => ({ ...current, [target]: objectUrl }));
+      setStagedFiles((current) => ({ ...current, [target]: file }));
+      const uploaded = await uploadFiles(isImage ? "imageUploader" : "pdfUploader", { files: [file] });
+      const result = uploaded[0];
+      if (!result) throw new Error("Storage tidak mengembalikan file");
+      const url = (result as typeof result & { ufsUrl?: string }).ufsUrl || result.url;
+      const receipt: UploadReceipt = { key: result.key, url, size: file.size, type: isImage ? "image" : "pdf" };
+      setReceipts((items) => [...items.filter((item) => item.url !== url), receipt]);
+      if (target === "thumbnail") setThumbnail(url); else updateBlock(target, { url });
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Upload gagal");
+      setPreviews((current) => { const next = { ...current }; delete next[target]; return next; });
+      setStagedFiles((current) => { const next = { ...current }; delete next[target]; return next; });
+    } finally { setUploading(null); }
+  };
 
-      setSaveStatus('Saving');
+  const chooseFile = (target: string) => {
+    setActiveFileTarget(target);
+    const block = blocks.find((item) => item.id === target);
+    if (fileInput.current) fileInput.current.accept = target === "thumbnail" || block?.type === "image" ? "image/jpeg,image/png,image/webp,image/avif" : "application/pdf";
+    fileInput.current?.click();
+  };
 
-      const result = await savePost({
-        id: initialData?.id,
-        title,
-        category,
-        thumbnail: finalThumbnail,
-        status,
-        blocks: finalBlocks.map((b) => ({
-          id: b.id,
-          type: b.type,
-          content: b.content,
-          url: b.url,
-          title: b.title || '',
-          caption: b.caption || '',
-          isLocked: b.isLocked ?? false,
-        })),
-      });
-
-      if (result.success) {
-        setSaveStatus('Success');
-        setTimeout(() => {
-          router.push('/admin');
-          router.refresh();
-        }, 1000);
-      } else {
-        setSaveStatus('Error');
-        alert(result.error || 'Gagal menyimpan');
-        setSaveStatus('Idle');
-      }
-    } catch (error: any) {
-      console.error("Upload/Save error:", error);
-      setSaveStatus('Error');
-      // No more blocking alert() here, the overlay shows 'Gagal Menyimpan' with a toggle button.
-    } finally {
-      setIsSavingInProgress(false);
+  type MutationData = { id?: string; version?: number; status?: PostStatusValue; slug?: string; publishedAt?: string | null };
+  const handleResult = (result: ActionResult<unknown>, successMessage: string) => {
+    if (!result.success) {
+      if (result.code === "CONFLICT") { setRecovery(null); setError(""); setSaveState("conflict"); }
+      else { setError(result.error); setSaveState("error"); }
+      return false;
     }
-  };
-
-  const handleDelete = async () => {
-    if (!initialData?.id) return;
-
-    startTransition(async () => {
-      const result = await deletePost(initialData.id);
-      if (result.success) {
-        router.push('/admin');
-        router.refresh();
-      } else {
-        alert(result.error || 'Gagal menghapus');
-        setShowDeleteConfirm(false);
-      }
+    const data = result.data && typeof result.data === "object" ? result.data as MutationData : undefined;
+    if (data?.id && data.version !== undefined) applyIdentity({ id: data.id, version: data.version, status: data.status, slug: data.slug });
+    else if (data?.version !== undefined) setVersion(data.version);
+    if (data?.status) setStatus(data.status);
+    if (data?.publishedAt) setPublishedAt(dateTimeLocal(data.publishedAt));
+    setSavedAt(new Date().toISOString()); setSaveState("saved"); setMessage(successMessage); setError("");
+    lastServerFingerprint.current = editorContentFingerprint({
+      ...payload,
+      id: data?.id ?? payload.id,
+      slug: data?.slug ?? payload.slug,
+      publishedAt: data?.publishedAt ?? payload.publishedAt,
+      newUploads: [],
     });
+    localStorage.removeItem(localKey); setSheet(null); return true;
   };
 
-  return (
-    <div className="min-h-screen">
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={onThumbnailChange}
-        accept="image/*"
-        className="hidden"
-      />
-      <input
-        type="file"
-        ref={blockFileInputRef}
-        onChange={handleBlockFileChange}
-        className="hidden"
-      />
-      {/* Ambient background */}
-      <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-0 w-[60vw] h-[60vh] bg-secondary-fixed opacity-10 blur-[160px] rounded-full" />
-        <div className="absolute bottom-0 right-0 w-[50vw] h-[50vh] bg-primary-fixed opacity-10 blur-[140px] rounded-full" />
-      </div>
+  const mutate = async (work: () => Promise<ActionResult<unknown>>, successMessage: string) => {
+    if (uploading) { setError("Tunggu upload selesai."); return false; }
+    setBusy(true); setError(""); setMessage("");
+    try { return handleResult(await work(), successMessage); } finally { setBusy(false); }
+  };
 
-      {/* ════════════════════════════════════════
-          Mobile / Intermediate — Fixed top bar (below main nav)
-          Visible on: xs → md → lg-1  (hidden on lg+)
-          ════════════════════════════════════════ */}
-      <div className="lg:hidden fixed top-[80px] inset-x-0 z-30">
-        {/* Primary row */}
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest/90 backdrop-blur-xl border-b border-outline-variant/15 shadow-sm">
-          {/* Back */}
-          <button
-            onClick={handleBack}
-            className="w-10 h-10 flex items-center justify-center rounded-2xl bg-surface-container border border-outline-variant/20 text-secondary hover:bg-surface-container-high transition-all shrink-0 active:scale-95"
-            title="Kembali"
-          >
-            <span className="material-symbols-outlined text-[22px]">arrow_back</span>
-          </button>
+  const save = async () => {
+    const saved = await mutate(() => savePostDraft(payload), "Draft dan revisi berhasil disimpan.");
+    if (saved) setCompletionDialog("draft");
+  };
+  const submit = () => mutate(() => submitPostForReview(payload), "Post dikirim ke antrean review.");
+  const publish = async () => {
+    const published = await mutate(() => publishPost(payload), "Artikel berhasil diterbitkan.");
+    if (published) setCompletionDialog("published");
+  };
+  const schedule = () => {
+    if (!scheduledAt) { setError("Pilih tanggal dan waktu jadwal."); return; }
+    mutate(() => schedulePost(payload, new Date(scheduledAt).toISOString()), "Artikel berhasil dijadwalkan.");
+  };
 
-          {/* Title + label */}
-          <div className="flex-1 min-w-0 px-1">
-            <p className="text-[8px] font-label font-bold tracking-[0.2em] text-secondary uppercase leading-none mb-1 opacity-70">
-              {initialData?.id ? 'Edit Mode' : 'Draft Mode'}
-            </p>
-            <p className="text-sm font-headline font-bold text-primary truncate leading-tight">
-              {title || 'Postingan Baru'}
-            </p>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Save Button */}
-            <button
-              onClick={() => handleSave(initialData?.status || 'Published')}
-              disabled={isPending || isSavingInProgress}
-              className={`flex items-center justify-center gap-2 h-10 px-4 rounded-2xl transition-all shadow-sm active:scale-95 disabled:opacity-50 ${(isDirty || isSavingInProgress)
-                ? 'bg-secondary text-on-secondary shadow-secondary/20'
-                : 'bg-surface-container text-on-surface-variant border border-outline-variant/20'}`}
-              title="Simpan Perubahan"
-            >
-              <span className="material-symbols-outlined text-[20px]">
-                {(isPending || isSavingInProgress) ? 'sync' : 'save'}
-              </span>
-              <span className="text-[11px] font-bold uppercase tracking-wide hidden xs:inline">
-                {(isPending || isSavingInProgress) ? 'Saving...' : 'Simpan'}
-              </span>
-            </button>
-
-            {/* Expand metadata toggle - Repurposed as "More" menu */}
-            <button
-              type="button"
-              onClick={() => setIsMobileMetaOpen(!isMobileMetaOpen)}
-              className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all shrink-0 active:scale-95 ${isMobileMetaOpen
-                ? 'bg-primary text-on-primary shadow-lg'
-                : 'bg-surface-container border border-outline-variant/20 text-on-surface-variant'
-                }`}
-              title="Menu Lainnya"
-            >
-              <span className="material-symbols-outlined text-[22px] transition-transform duration-300" style={{ transform: isMobileMetaOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                {isMobileMetaOpen ? 'close' : 'more_vert'}
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Expandable metadata drawer */}
-        {isMobileMetaOpen && (
-          <div className="bg-surface-container-lowest/98 backdrop-blur-xl border-b border-outline-variant/25 shadow-2xl px-4 py-5 flex flex-col gap-5 animate-in slide-in-from-top duration-300">
-
-            {/* Quick Actions in Drawer */}
-            <div className="flex flex-col gap-3">
-              <label className="text-[9px] font-label font-bold tracking-[0.2em] text-secondary/70 uppercase mb-0.5 block">Tindakan</label>
-              <div className="grid grid-cols-2 gap-3">
-                {initialData?.id ? (
-                  <>
-                    {/* Status Toggle */}
-                    {initialData?.status === 'Published' ? (
-                      <button
-                        onClick={() => handleSave('Draft')}
-                        disabled={isSavingInProgress}
-                        className="flex items-center justify-center gap-2 px-4 h-12 rounded-2xl bg-surface-container border border-outline-variant/20 text-on-surface-variant font-bold text-xs"
-                      >
-                        <span className="material-symbols-outlined text-[20px]">drafts</span>
-                        KE DRAFT
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleSave('Published')}
-                        disabled={isSavingInProgress}
-                        className="flex items-center justify-center gap-2 px-4 h-12 rounded-2xl bg-secondary/10 border border-secondary/20 text-secondary font-bold text-xs"
-                      >
-                        <span className="material-symbols-outlined text-[20px]">publish</span>
-                        TERBITKAN
-                      </button>
-                    )}
-                    {/* Delete button */}
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      disabled={isSavingInProgress}
-                      className="flex items-center justify-center gap-2 px-4 h-12 rounded-2xl bg-error/10 border border-error/20 text-error font-bold text-xs"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">delete</span>
-                      HAPUS POS
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => handleSave('Draft')}
-                      disabled={isSavingInProgress}
-                      className="flex items-center justify-center gap-2 px-4 h-12 rounded-2xl bg-surface-container border border-outline-variant/20 text-on-surface-variant font-bold text-xs"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">save</span>
-                      SIMPAN DRAFT
-                    </button>
-                    <button
-                      onClick={() => handleSave('Published')}
-                      disabled={isSavingInProgress}
-                      className="flex items-center justify-center gap-2 px-4 h-12 rounded-2xl bg-secondary text-on-secondary font-bold text-xs"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">publish</span>
-                      PUBLISH
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="h-px bg-outline-variant/20 w-full" />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Title input */}
-              <div>
-                <label className="text-[9px] font-label font-bold tracking-[0.2em] text-secondary/70 uppercase mb-2 block">Judul Postingan</label>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Tulis judul…"
-                  className="w-full bg-surface-container/60 border border-outline-variant/20 rounded-2xl px-4 py-3 text-primary font-headline font-bold text-sm focus:outline-none focus:border-secondary/50 transition-all placeholder:text-on-surface-variant/30"
-                />
-              </div>
-              {/* Category */}
-              <div>
-                <label className="text-[9px] font-label font-bold tracking-[0.2em] text-secondary/70 uppercase mb-2 block">Kategori</label>
-                <div className="relative">
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-surface-container/60 border border-outline-variant/20 rounded-2xl px-4 py-3 text-primary text-sm font-medium focus:outline-none focus:border-secondary/50 transition-all appearance-none cursor-pointer"
-                  >
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant/40 text-[18px]">expand_more</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Thumbnail compact */}
-            <div>
-              <label className="text-[9px] font-label font-bold tracking-[0.2em] text-secondary/70 uppercase mb-2 block">Thumbnail</label>
-              <div className="flex items-center gap-4">
-                <div className={`w-20 h-20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden shrink-0 transition-all ${previews.thumbnail || thumbnail ? 'border-secondary/30 scale-105' : 'border-outline-variant/20 bg-surface-container/50'
-                  }`}>
-                  {previews.thumbnail || thumbnail
-                    ? <img src={previews.thumbnail || thumbnail} alt="Preview" className="w-full h-full object-cover" />
-                    : <span className="material-symbols-outlined text-secondary/30 text-2xl">add_photo_alternate</span>
-                  }
-                </div>
-                <div className="flex-1 flex flex-col gap-2.5">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleThumbnailClick}
-                      disabled={saveStatus !== 'Idle'}
-                      className="flex-1 h-11 px-4 rounded-xl bg-secondary text-on-secondary text-[10px] font-extrabold transition-all hover:bg-primary shadow-md flex items-center justify-center gap-2 active:scale-95 disabled:opacity-70"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">
-                        {saveStatus === 'Uploading' ? 'sync' : 'add_a_photo'}
-                      </span>
-                      {saveStatus === 'Uploading' ? 'LOADING' : (previews.thumbnail || thumbnail ? 'GANTI' : 'UNGGAH')}
-                    </button>
-                    {(previews.thumbnail || thumbnail) && saveStatus === 'Idle' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (confirm('Hapus thumbnail?')) {
-                            if (stagedFiles.thumbnail) {
-                              const newStaged = { ...stagedFiles };
-                              delete newStaged.thumbnail;
-                              setStagedFiles(newStaged);
-                            }
-                            if (previews.thumbnail) {
-                              URL.revokeObjectURL(previews.thumbnail);
-                              const newPreviews = { ...previews };
-                              delete newPreviews.thumbnail;
-                              setPreviews(newPreviews);
-                            }
-                            setThumbnail('');
-                          }
-                        }}
-                        className="w-11 h-11 rounded-xl bg-error/10 hover:bg-error/20 text-error transition-all flex items-center justify-center active:scale-95 border border-error/20"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-[8px] font-medium text-on-surface-variant/50 leading-tight uppercase tracking-wider">Rasio 1:1 disarankan untuk tampilan optimal.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Main editor area (right padding to avoid sidebar overlap on lg+) ── */}
-      <main className="min-h-screen sm:px-8 xl:px-14 pb-32 lg:pr-80 xl:pr-88
-        pt-[80px] lg:pt-6">
-
-        {/* ── Blocks ── */}
-        <div className="space-y-6">
-          {blocks.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-24 text-center rounded-3xl border-2 border-dashed border-outline-variant/30 bg-surface-container-lowest/40">
-              <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-4 shadow-inner">
-                <span className="material-symbols-outlined text-3xl text-on-surface-variant/50">
-                  article
-                </span>
-              </div>
-              <p className="font-headline font-bold text-primary/60 mb-1">Belum ada konten</p>
-              <p className="text-xs text-on-surface-variant/50">
-                Tambahkan balok melalui toolbar di bawah
-              </p>
-            </div>
-          )}
-
-          {blocks.map((block, i) => (
-            <BlockItem
-              key={block.id}
-              block={block}
-              index={i}
-              isFirst={i === 0}
-              isLast={i === blocks.length - 1}
-              isDeleting={blockToDelete === block.id}
-              preview={previews[block.id]}
-              stagedFile={stagedFiles[block.id]}
-              onUpdate={updateBlock}
-              onRemove={removeBlock}
-              onConfirmRemove={confirmRemoveBlock}
-              onCancelDelete={() => setBlockToDelete(null)}
-              onMove={moveBlock}
-              onFileSelect={onBlockFileSelect}
-              saveStatus={saveStatus}
-            />
-          ))}
-        </div>
-      </main>
-
-      {/* ── Add-block toolbar — fixed at bottom center (desktop) ── */}
-      <div className="hidden md:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-30 items-center gap-2 bg-surface-container-lowest/95 backdrop-blur-xl border border-outline-variant/20 shadow-2xl rounded-full px-5 py-3">
-        <span className="text-[10px] font-label font-bold text-on-surface-variant/60 uppercase tracking-widest mr-2">
-          + Tambah
-        </span>
-        {[
-          { type: 'text' as const, icon: 'notes', label: 'Teks' },
-          { type: 'image' as const, icon: 'image', label: 'Gambar' },
-          { type: 'video' as const, icon: 'smart_display', label: 'Video' },
-          { type: 'pdf' as const, icon: 'picture_as_pdf', label: 'PDF' },
-          { type: 'link' as const, icon: 'link', label: 'Link' },
-        ].map((item, idx, arr) => (
-          <div key={item.type} className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => addBlock(item.type)}
-              className="flex items-center gap-1.5 text-sm font-bold text-primary hover:text-secondary px-3 py-1.5 rounded-full hover:bg-surface-container-low transition-colors"
-            >
-              <span className="material-symbols-outlined text-[17px]">{item.icon}</span>
-              {item.label}
-            </button>
-            {idx < arr.length - 1 && <div className="w-px h-5 bg-outline-variant/40" />}
-          </div>
-        ))}
-      </div>
-
-      {/* ── Mobile FAB ── */}
-      <div className="md:hidden fixed bottom-8 right-6 z-30 flex flex-col items-end gap-3">
-        {isAddMenuOpen && (
-          <>
-            <div className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[2px]" onClick={() => setIsAddMenuOpen(false)} />
-            <div className="absolute bottom-20 right-0 z-50 bg-surface-container-lowest/95 backdrop-blur-xl border border-outline-variant/30 shadow-2xl rounded-3xl p-3 flex flex-col gap-1 min-w-[200px]">
-              {[
-                { type: 'text' as const, icon: 'notes', label: 'Teks Baru' },
-                { type: 'image' as const, icon: 'image', label: 'Gambar' },
-                { type: 'video' as const, icon: 'smart_display', label: 'Video YouTube' },
-                { type: 'pdf' as const, icon: 'picture_as_pdf', label: 'Dokumen PDF' },
-                { type: 'link' as const, icon: 'link', label: 'Tautan Sumber' },
-              ].map((item) => (
-                <button
-                  key={item.type}
-                  type="button"
-                  onClick={() => { addBlock(item.type); setIsAddMenuOpen(false); }}
-                  className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-2xl hover:bg-secondary/10 text-primary hover:text-secondary transition-all group"
-                >
-                  <div className="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center group-hover:bg-secondary group-hover:text-on-secondary transition-colors">
-                    <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
-                  </div>
-                  <span className="font-headline font-bold text-sm">{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-        <button
-          type="button"
-          onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
-          className={`z-50 w-14 h-14 rounded-full backdrop-blur-xl border-2 shadow-2xl flex items-center justify-center transition-all duration-300 ${isAddMenuOpen
-            ? 'rotate-45 bg-error/10 border-error/40 text-error'
-            : 'bg-secondary/10 border-secondary/40 text-secondary'
-            }`}
-        >
-          <span className="material-symbols-outlined text-3xl">add</span>
-        </button>
-      </div>
-
-      {/* ════════════════════════════════════════
-          Floating Island Sidebar — fixed, follows scroll
-          ════════════════════════════════════════ */}
-      <div className="hidden lg:block fixed top-[88px] right-4 xl:right-6 z-20 w-72 xl:w-80">
-        <div className="bg-surface-container-lowest/95 backdrop-blur-xl border border-outline-variant/15 shadow-2xl rounded-3xl overflow-hidden">
-          <div className="p-5 flex flex-col gap-4">
-
-            {/* Header: back button + title */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleBack}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-container border border-outline-variant/20 text-secondary hover:bg-surface-container-high transition-colors shrink-0"
-                title="Kembali ke Dashboard"
-              >
-                <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-              </button>
-              <div className="min-w-0">
-                <p className="font-label text-[9px] font-bold tracking-[0.2em] text-secondary uppercase">
-                  {initialData?.id ? 'Edit Postingan' : 'Postingan Baru'}
-                </p>
-                <h2 className="text-sm font-headline font-bold text-primary truncate">
-                  {title || 'Tanpa Judul'}
-                </h2>
-              </div>
-            </div>
-
-            <div className="border-t border-outline-variant/15" />
-
-            {/* Title */}
-            <div>
-              <label className="text-[9px] font-label font-bold tracking-[0.2em] text-secondary/70 uppercase mb-1.5 block">
-                Judul
-              </label>
-              <input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Tulis judul…"
-                className="w-full bg-surface-container/60 border border-outline-variant/20 rounded-xl px-3.5 py-2.5 text-primary font-headline font-bold text-sm focus:outline-none focus:border-secondary/50 transition-all placeholder:text-on-surface-variant/30"
-              />
-            </div>
-
-            {/* Category */}
-            <div>
-              <label className="text-[9px] font-label font-bold tracking-[0.2em] text-secondary/70 uppercase mb-1.5 block">
-                Kategori
-              </label>
-              <div className="relative">
-                <select
-                  id="category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-surface-container/60 border border-outline-variant/20 rounded-xl px-3.5 py-2.5 text-primary text-sm font-medium focus:outline-none focus:border-secondary/50 transition-all appearance-none cursor-pointer"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant/40 text-[18px]">
-                  expand_more
-                </span>
-              </div>
-            </div>
-
-            {/* Thumbnail */}
-            <div>
-              <label className="text-[9px] font-label font-bold tracking-[0.2em] text-secondary/70 uppercase mb-2 block">
-                Thumbnail
-              </label>
-              <div className="flex gap-3 items-start">
-                <div
-                  className={`shrink-0 w-20 h-20 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all ${previews.thumbnail || thumbnail
-                    ? 'border-secondary/30 bg-surface-container-low'
-                    : 'border-outline-variant/20 bg-surface-container/50'
-                    }`}
-                >
-                  {previews.thumbnail || thumbnail ? (
-                    <img src={previews.thumbnail || thumbnail} alt="Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="material-symbols-outlined text-secondary/30 text-xl">add_photo_alternate</span>
-                  )}
-                </div>
-                <div className="flex-1 flex flex-col gap-2.5 pl-2 pr-8">
-                  <button
-                    type="button"
-                    onClick={handleThumbnailClick}
-                    disabled={saveStatus !== 'Idle'}
-                    className="w-fit min-w-[180px] h-12 px-8 rounded-2xl bg-secondary text-on-secondary text-[10px] font-extrabold transition-all hover:bg-primary shadow-lg flex items-center justify-center gap-2 active:scale-95 disabled:opacity-70"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">
-                      {saveStatus === 'Uploading' ? 'sync' : 'add_a_photo'}
-                    </span>
-                    {saveStatus === 'Uploading' ? 'UPLOADING...' : (previews.thumbnail || thumbnail ? 'GANTI GAMBAR' : 'PILIH GAMBAR')}
-                  </button>
-                  {(previews.thumbnail || thumbnail) && saveStatus === 'Idle' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm('Hapus thumbnail?')) {
-                          if (stagedFiles.thumbnail) {
-                            const newStaged = { ...stagedFiles };
-                            delete newStaged.thumbnail;
-                            setStagedFiles(newStaged);
-                          }
-                          if (previews.thumbnail) {
-                            URL.revokeObjectURL(previews.thumbnail);
-                            const newPreviews = { ...previews };
-                            delete newPreviews.thumbnail;
-                            setPreviews(newPreviews);
-                          }
-                          setThumbnail('');
-                        }
-                      }}
-                      className="w-fit min-w-[180px] h-11 px-8 rounded-2xl bg-error/10 hover:bg-error/20 text-error text-[10px] font-extrabold transition-all flex items-center justify-center gap-2 active:scale-95"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">delete</span>
-                      HAPUS
-                    </button>
-                  )}
-                  <p className="text-[9px] text-on-surface-variant/40 leading-tight pt-1">Rasio 1:1 disarankan.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats + status */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[15px] text-secondary/60">layers</span>
-                <span className="text-[11px] font-bold text-primary/70">{blocks.length} Balok</span>
-              </div>
-              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-bold uppercase tracking-wider ${initialData?.status === 'Published'
-                ? 'bg-secondary/5 border-secondary/20 text-secondary'
-                : 'bg-on-surface-variant/5 border-outline-variant/20 text-on-surface-variant/60'
-                }`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${initialData?.status === 'Published' ? 'bg-secondary' : 'bg-on-surface-variant/40'}`} />
-                {initialData?.status || 'Draft'}
-              </div>
-            </div>
-
-            <div className="border-t border-outline-variant/15" />
-
-            {/* Action buttons */}
-            <div className="flex flex-col gap-2.5">
-              {initialData?.id ? (
-                // EDIT MODE
-                <>
-                  <button
-                    onClick={() => handleSave(initialData?.status || 'Published')}
-                    disabled={isPending || isSavingInProgress}
-                    className={`w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-secondary text-on-secondary hover:bg-primary transition-all shadow-md disabled:opacity-50 cursor-pointer ${(isDirty || isSavingInProgress) ? 'pulse-green' : ''}`}
-                  >
-                    <span className="material-symbols-outlined text-[20px]">{(isPending || isSavingInProgress) ? 'sync' : 'save'}</span>
-                    <span className="text-[11px] font-bold uppercase tracking-widest">
-                      {(isPending || isSavingInProgress) ? 'Menyimpan…' : 'Simpan Perubahan'}
-                    </span>
-                  </button>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      disabled={isPending}
-                      className="flex items-center justify-center gap-2 py-3 px-2 rounded-2xl bg-error/5 hover:bg-error/10 text-error transition-all border border-error/10 disabled:opacity-50 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">delete</span>
-                      <span className="text-[9px] font-bold uppercase tracking-wider">Hapus</span>
-                    </button>
-
-                    {initialData?.status === 'Published' ? (
-                      <button
-                        onClick={() => handleSave('Draft')}
-                        disabled={isPending || isSavingInProgress}
-                        className="flex items-center justify-center gap-2 py-3 px-2 rounded-2xl bg-surface-container hover:bg-surface-container-high transition-all border border-outline-variant/15 disabled:opacity-50 cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">{(isPending || isSavingInProgress) ? 'sync' : 'drafts'}</span>
-                        <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider text-center">{(isPending || isSavingInProgress) ? '...' : 'Jadikan Draft'}</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleSave('Published')}
-                        disabled={isSavingInProgress}
-                        className="flex items-center justify-center gap-2 py-3 px-2 rounded-2xl bg-surface-container hover:bg-surface-container-high transition-all border border-outline-variant/15 disabled:opacity-50 cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">publish</span>
-                        <span className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Terbitkan</span>
-                      </button>
-                    )}
-                  </div>
-                </>
-              ) : (
-                // CREATE MODE (Draft / Publish)
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    onClick={() => handleSave('Draft')}
-                    disabled={isSavingInProgress}
-                    className={`flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-2xl bg-surface-container hover:bg-surface-container-high transition-all border border-outline-variant/20 disabled:opacity-50 cursor-pointer ${isDirty ? 'pulse-green' : ''}`}
-                  >
-                    <span className="material-symbols-outlined text-[22px] text-on-surface-variant">save</span>
-                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                      {isSavingInProgress ? '…' : 'Draft'}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => handleSave('Published')}
-                    disabled={isSavingInProgress}
-                    className={`flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-2xl bg-secondary text-on-secondary hover:bg-primary transition-all shadow-md disabled:opacity-50 cursor-pointer ${isDirty ? 'pulse-green' : ''}`}
-                  >
-                    <span className="material-symbols-outlined text-[22px]">publish</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider">
-                      {isSavingInProgress ? '…' : 'Publish'}
-                    </span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => !isSavingInProgress && setShowDeleteConfirm(false)}
-          />
-          <div className="relative w-full max-w-sm bg-surface-container-lowest rounded-3xl shadow-2xl border border-outline-variant/20 p-6 overflow-hidden">
-            {/* Background pattern */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-error/5 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
-
-            <div className="flex flex-col items-center text-center">
-              <div className="w-14 h-14 rounded-2xl bg-error/10 text-error flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-[32px]">delete_forever</span>
-              </div>
-              <h3 className="text-lg font-headline font-bold text-primary mb-2">Hapus Postingan?</h3>
-              <p className="text-sm text-on-surface-variant/70 leading-relaxed mb-6">
-                Tindakan ini tidak dapat dibatalkan. Semua data postingan dan file terkait akan dihapus secara permanen.
-              </p>
-
-              <div className="flex flex-col gap-2 w-full">
-                <button
-                  onClick={handleDelete}
-                  disabled={isPending}
-                  className="w-full h-12 rounded-2xl bg-error text-white font-bold text-sm shadow-lg hover:bg-error/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isPending ? (
-                    <span className="material-symbols-outlined animate-spin">sync</span>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-[20px]">delete</span>
-                      HAPUS SEKARANG
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  disabled={isPending}
-                  className="w-full h-11 rounded-2xl bg-surface-container text-primary font-bold text-[13px] hover:bg-surface-container-high transition-all"
-                >
-                  BATALKAN
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Unsaved Changes Confirmation Modal */}
-      {showUnsavedConfirm && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => !isPending && setShowUnsavedConfirm(false)}
-          />
-          <div className="relative w-full max-w-sm bg-surface-container-lowest rounded-3xl shadow-2xl border border-outline-variant/20 p-6 overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-secondary/5 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
-
-            <div className="flex flex-col items-center text-center">
-              <div className="w-14 h-14 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-[32px]">warning</span>
-              </div>
-              <h3 className="text-lg font-headline font-bold text-primary mb-2">Simpan Perubahan?</h3>
-              <p className="text-sm text-on-surface-variant/70 leading-relaxed mb-6">
-                Ada perubahan yang belum tersimpan. Apakah Anda ingin menyimpannya sekarang?
-              </p>
-
-              <div className="flex flex-col gap-2 w-full">
-                <button
-                  onClick={() => handleSave(initialData?.id ? (initialData.status || 'Published') : 'Draft')}
-                  disabled={isPending}
-                  className="w-full h-12 rounded-2xl bg-secondary text-white font-bold text-sm shadow-lg hover:bg-primary transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isPending ? (
-                    <span className="material-symbols-outlined animate-spin">sync</span>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-[20px]">save</span>
-                      {initialData?.id ? 'SIMPAN PERUBAHAN' : 'SIMPAN SEBAGAI DRAFT'}
-                    </>
-                  )}
-                </button>
-                <div className="grid grid-cols-2 gap-2 w-full mt-1">
-                  <button
-                    onClick={() => {
-                      setShowUnsavedConfirm(false);
-                      router.push(pendingPath || '/admin');
-                    }}
-                    disabled={isPending}
-                    className="h-11 rounded-2xl bg-surface-container-low text-on-surface-variant font-bold text-[11px] hover:bg-surface-container transition-all"
-                  >
-                    KELUAR SAJA
-                  </button>
-                  <button
-                    onClick={() => setShowUnsavedConfirm(false)}
-                    disabled={isPending}
-                    className="h-11 rounded-2xl bg-surface-container text-primary font-bold text-[11px] hover:bg-surface-container-high transition-all"
-                  >
-                    LANJUT EDIT
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Loading Overlay */}
-      <AnimatePresence>
-        {saveStatus !== 'Idle' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-surface-container-lowest/80 backdrop-blur-md"
-          >
-            <div className="bg-surface-container-lowest border border-outline-variant/20 shadow-2xl rounded-3xl p-8 max-w-sm w-full mx-4 flex flex-col items-center text-center">
-              <div className="relative mb-6">
-                <div className="w-16 h-16 rounded-full border-4 border-secondary/20 border-t-secondary animate-spin" />
-                {saveStatus === 'Success' && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute inset-0 flex items-center justify-center bg-surface-container-lowest rounded-full"
-                  >
-                    <span className="material-symbols-outlined text-4xl text-green-500">check_circle</span>
-                  </motion.div>
-                )}
-                {saveStatus === 'Error' && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute inset-0 flex items-center justify-center bg-surface-container-lowest rounded-full"
-                  >
-                    <span className="material-symbols-outlined text-4xl text-error">error</span>
-                  </motion.div>
-                )}
-              </div>
-
-              <h3 className="text-xl font-headline font-bold text-primary mb-2">
-                {saveStatus === 'Uploading' && 'Mengunggah File...'}
-                {saveStatus === 'Saving' && 'Menyimpan Postingan...'}
-                {saveStatus === 'Success' && 'Berhasil Disimpan!'}
-                {saveStatus === 'Error' && 'Gagal Menyimpan'}
-              </h3>
-
-              <p className="text-sm text-on-surface-variant/70 leading-relaxed">
-                {saveStatus === 'Uploading' && 'Mohon tunggu sebentar, file sedang diunggah ke storage.'}
-                {saveStatus === 'Saving' && 'Sedang mendaftarkan postingan Anda ke database.'}
-                {saveStatus === 'Success' && 'Halaman akan segera dialihkan ke Dashboard.'}
-                {saveStatus === 'Error' && 'Terjadi kesalahan saat proses penyimpanan. Silakan coba lagi.'}
-              </p>
-
-              {saveStatus === 'Error' && (
-                <button
-                  onClick={() => setSaveStatus('Idle')}
-                  className="mt-6 px-6 py-2 rounded-full bg-surface-container text-primary font-bold text-sm hover:bg-surface-container-high transition-all"
-                >
-                  TUTUP
-                </button>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+  const metadataPanel = (
+    <div className="space-y-4">
+      <Field label="Ringkasan (opsional)" hint="Jika dikosongkan, ringkasan dibuat otomatis dari blok teks pertama."><textarea className="editor-field" rows={3} maxLength={300} value={excerpt} onChange={(event) => setExcerpt(event.target.value)} disabled={locked} placeholder="Biarkan kosong untuk membuat otomatis dari isi artikel" /><span className="block text-right text-xs text-on-surface-variant">{excerpt.length}/300</span></Field>
+      <Field label="Kategori"><select className="editor-field" value={category} onChange={(event) => setCategory(event.target.value as typeof category)} disabled={locked}>{POST_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></Field>
+      <Field label="Tag" hint="Pisahkan dengan koma, maksimal 10 tag."><input className="editor-field" value={tagsText} onChange={(event) => setTagsText(event.target.value)} disabled={locked} placeholder="organisasi, sosial, kegiatan" /></Field>
+      <Field label="Nama penulis"><input className="editor-field" value={authorName} onChange={(event) => setAuthorName(event.target.value)} disabled={locked || !isSuper} /></Field>
+      <Field label="Tanggal publikasi (opsional)" hint="Jika kosong, waktu saat tombol Terbitkan sekarang ditekan akan digunakan."><input className="editor-field" type="datetime-local" value={publishedAt} onChange={(event) => setPublishedAt(event.target.value)} disabled={locked} /></Field>
+      <Field label="Thumbnail">
+        {thumbnail || previews.thumbnail ? <Image src={previews.thumbnail || thumbnail} alt="Pratinjau thumbnail" width={640} height={360} unoptimized={Boolean(previews.thumbnail?.startsWith("blob:"))} className="aspect-video w-full rounded-xl object-cover" /> : <div className="grid aspect-video place-items-center rounded-xl bg-surface-container text-sm text-on-surface-variant">Belum ada thumbnail</div>}
+        <button type="button" onClick={() => chooseFile("thumbnail")} disabled={locked || uploading === "thumbnail"} className="mt-2 min-h-11 w-full rounded-xl bg-secondary px-4 text-sm font-bold text-on-secondary disabled:opacity-50">{uploading === "thumbnail" ? "Mengunggah…" : "Pilih thumbnail"}</button>
+      </Field>
+      <Field label="Nama sumber"><input className="editor-field" value={sourceTitle} onChange={(event) => setSourceTitle(event.target.value)} disabled={locked} placeholder="Nama sumber (opsional)" /></Field>
+      <Field label="URL sumber"><input className="editor-field" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} disabled={locked} inputMode="url" placeholder="https://…" /></Field>
     </div>
   );
-};
+
+  const seoPanel = (
+    <div className="space-y-5">
+      <div className="rounded-2xl bg-secondary/10 p-4 text-sm text-primary">
+        <p className="font-bold">Diisi otomatis dari konten</p>
+        <p className="mt-1 text-on-surface-variant">Judul pencarian memakai Judul Artikel. Deskripsi memakai Ringkasan, atau otomatis mengambil isi blok teks pertama jika Ringkasan kosong.</p>
+      </div>
+      <div className="overflow-hidden rounded-2xl border border-outline-variant/30 bg-white p-4 text-slate-800">
+        <p className="truncate text-xs text-emerald-700">pcnubolsel.or.id › post › {slug || "judul-artikel"}</p>
+        <h3 className="mt-1 line-clamp-2 text-lg text-blue-700">{title || "Judul artikel"}</h3>
+        <p className="mt-1 line-clamp-3 text-sm text-slate-600">{effectiveExcerpt || "Tambahkan blok teks untuk membuat ringkasan otomatis."}</p>
+      </div>
+      <div className="flex items-center justify-between text-xs text-on-surface-variant"><span>Panjang judul</span><span className={title.length > 60 ? "font-bold text-error" : ""}>{title.length}/60</span></div>
+      <div className="flex items-center justify-between text-xs text-on-surface-variant"><span>Panjang ringkasan otomatis</span><span className={effectiveExcerpt.length > 160 ? "font-bold text-error" : ""}>{effectiveExcerpt.length}/160</span></div>
+      <div className="rounded-2xl bg-surface-container p-4 text-sm">
+        <p className="font-bold">Kesiapan publikasi</p>
+        {[Boolean(title.trim()) && "Judul tersedia", Boolean(effectiveExcerpt) && "Ringkasan tersedia otomatis", blocks.length > 0 && "Konten tersedia", blocks.filter((b) => b.type === "image").every((b) => b.altText?.trim()) && "Alt text gambar lengkap"].filter(Boolean).map((item) => <p key={String(item)} className="mt-2 flex gap-2"><span className="material-symbols-outlined text-base text-secondary">check_circle</span>{item}</p>)}
+      </div>
+    </div>
+  );
+
+  const historyPanel = (
+    <div className="space-y-6">
+      {revisions.length ? <div><h3 className="mb-3 font-bold">Riwayat revisi</h3><div className="space-y-2">{revisions.map((revision) => <div key={revision.id} className="rounded-xl border border-outline-variant/25 p-3"><div className="flex items-start justify-between gap-2"><div><p className="font-bold">Versi {revision.version} {revision.isPublished && <span className="text-xs text-secondary">• live</span>}</p><p className="text-xs text-on-surface-variant">{revision.reason} · {revision.actorName}<br />{formatDate(revision.createdAt)}</p></div><button type="button" disabled={busy || locked} onClick={() => mutate(() => restorePostRevision(postId!, revision.id, version), `Versi ${revision.version} dipulihkan sebagai draft.`)} className="min-h-11 rounded-xl px-3 text-xs font-bold text-secondary disabled:opacity-40">Pulihkan</button></div></div>)}</div></div> : <p className="text-sm text-on-surface-variant">Revisi dibuat saat disimpan secara eksplisit.</p>}
+      {activities.length ? <div><h3 className="mb-3 font-bold">Aktivitas</h3><ol className="space-y-3">{activities.map((activity) => <li key={activity.id} className="border-l-2 border-secondary/30 pl-3 text-sm"><p className="font-bold">{activity.type.replaceAll("_", " ")}</p><p className="text-xs text-on-surface-variant">{activity.actorName} · {formatDate(activity.createdAt)}</p>{activity.note && <p className="mt-1 rounded-lg bg-surface-container p-2">{activity.note}</p>}</li>)}</ol></div> : null}
+    </div>
+  );
+
+  const workflowActions = (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3 px-1">
+        <div><p className="text-xs font-black uppercase tracking-[0.12em] text-primary">Workflow</p><p className="text-[11px] text-on-surface-variant">{POST_STATUS_LABELS[status]} {live ? "· Live" : "· Belum live"}</p></div>
+        {busy && <span className="material-symbols-outlined animate-spin text-lg text-secondary" aria-label="Memproses">progress_activity</span>}
+      </div>
+      {!locked && <div className="grid grid-cols-2 gap-2"><button type="button" onClick={save} disabled={busy} className="editor-action bg-surface-container text-primary"><span className="material-symbols-outlined mr-1.5 text-lg">save</span>Draft</button><button type="button" onClick={submit} disabled={busy} className="editor-action bg-primary text-on-primary"><span className="material-symbols-outlined mr-1.5 text-lg">rate_review</span>Review</button></div>}
+      {isSuper && <button type="button" onClick={publish} disabled={busy} className="editor-action bg-secondary text-on-secondary"><span className="material-symbols-outlined mr-2 text-lg">publish</span>Terbitkan sekarang</button>}
+      {isSuper && <details className="group rounded-xl border border-outline-variant/30 bg-surface-container-lowest"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-xs font-bold"><span className="flex items-center gap-2"><span className="material-symbols-outlined text-lg text-secondary">schedule</span>Jadwalkan publikasi</span><span className="material-symbols-outlined text-lg transition group-open:rotate-180">expand_more</span></summary><div className="border-t border-outline-variant/20 p-3"><input aria-label="Jadwal publikasi WIB" type="datetime-local" className="editor-field" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} /><button type="button" onClick={schedule} disabled={busy} className="editor-action mt-2 bg-primary text-on-primary">Simpan jadwal</button></div></details>}
+      {isSuper && status === "IN_REVIEW" && <button type="button" onClick={() => { const note = window.prompt("Catatan revisi untuk editor"); if (note && postId) mutate(() => returnPostToDraft(postId, version, note), "Review dikembalikan menjadi draft."); }} className="editor-action bg-amber-100 text-amber-900">Kembalikan dengan catatan</button>}
+      {isSuper && status === "SCHEDULED" && postId && <button type="button" onClick={() => mutate(() => cancelScheduledPost(postId, version), "Jadwal dibatalkan.")} className="editor-action bg-surface-container text-primary">Batalkan jadwal</button>}
+      {isSuper && postId && <details className="group rounded-xl border border-outline-variant/20"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-xs font-bold text-on-surface-variant"><span>Aksi lainnya</span><span className="material-symbols-outlined text-lg transition group-open:rotate-180">expand_more</span></summary><div className="space-y-2 border-t border-outline-variant/20 p-2">{live && <button type="button" onClick={() => window.confirm("Arsipkan dan lepas artikel dari publik?") && mutate(() => unpublishPost(postId, version), "Artikel diarsipkan.")} className="editor-action bg-error/10 text-error">Unpublish / arsipkan</button>}<button type="button" onClick={() => window.confirm("Hapus post secara permanen? Tindakan ini tidak dapat dibatalkan.") && mutate(async () => { const result = await deletePostPermanently(postId, version); if (result.success) router.push("/admin"); return result; }, "Post dihapus permanen.")} className="editor-action text-error">Hapus permanen</button></div></details>}
+    </div>
+  );
+
+  return (
+    <div
+      className="min-h-[100dvh] min-w-0 overflow-x-hidden bg-surface-container-low pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-8"
+      onInputCapture={() => { hasEditorInteraction.current = true; }}
+      onKeyDownCapture={() => { hasEditorInteraction.current = true; }}
+      onPointerDownCapture={() => { hasEditorInteraction.current = true; }}
+    >
+      <input ref={fileInput} type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file && activeFileTarget) void upload(activeFileTarget, file); event.target.value = ""; }} />
+      <header className="sticky top-0 z-40 border-b border-outline-variant/25 bg-surface-container-lowest/95 px-3 py-2 backdrop-blur-xl sm:px-5">
+        <div className="mx-auto flex max-w-[1500px] items-center gap-2">
+          <Link href="/admin" className="grid size-11 shrink-0 place-items-center rounded-full hover:bg-surface-container" aria-label="Kembali ke dashboard"><span className="material-symbols-outlined">arrow_back</span></Link>
+          <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{title || "Post baru"}</p><div className="flex flex-wrap items-center gap-x-2 text-[11px] text-on-surface-variant"><span>{POST_STATUS_LABELS[status]}</span><span>{live ? "• Live" : "• Belum live"}</span><span>• {saveState === "saving" ? "Menyimpan…" : saveState === "offline" ? "Offline · lokal saja" : saveState === "conflict" ? "Konflik versi" : savedAt ? `Tersimpan ${formatDate(savedAt)}` : "Belum disimpan"}</span></div></div>
+          {postId && <Link href={`/admin/post/${postId}/preview`} target="_blank" className="hidden min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold sm:flex"><span className="material-symbols-outlined">visibility</span>Preview</Link>}
+          <button type="button" onClick={() => setPreviewMode((value) => !value)} className="grid size-11 place-items-center rounded-xl sm:hidden" aria-label="Pratinjau"><span className="material-symbols-outlined">visibility</span></button>
+          <button type="button" onClick={() => setSheet("actions")} className="grid size-11 place-items-center rounded-xl bg-secondary text-on-secondary md:hidden" aria-label="Buka aksi"><span className="material-symbols-outlined">more_vert</span></button>
+        </div>
+      </header>
+
+      {recovery && <div className="mx-auto mt-3 flex max-w-5xl flex-wrap items-center justify-between gap-2 rounded-2xl bg-amber-100 px-4 py-3 text-sm text-amber-950"><span>Ada draft lokal yang lebih baru daripada versi server.</span><div><button type="button" onClick={restoreLocal} className="min-h-11 px-3 font-bold">Pulihkan</button><button type="button" onClick={() => { localStorage.removeItem(localKey); setRecovery(null); }} className="min-h-11 px-3">Abaikan</button></div></div>}
+      {saveState === "conflict" && <div className="mx-auto mt-3 max-w-5xl rounded-2xl bg-error/10 p-4 text-sm text-error"><p className="font-bold">Versi server lebih baru. Perubahan lokal tidak ditimpa.</p><div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={() => location.reload()} className="min-h-11 rounded-xl bg-error px-4 font-bold text-white">Muat ulang server</button><button type="button" onClick={() => navigator.clipboard.writeText(JSON.stringify(payload, null, 2))} className="min-h-11 rounded-xl border border-error px-4 font-bold">Salin perubahan lokal</button></div></div>}
+      {saveState !== "conflict" && (message || error) && <div aria-live="polite" className={`mx-auto mt-3 max-w-5xl rounded-xl px-4 py-3 text-sm ${error ? "bg-error/10 text-error" : "bg-secondary/10 text-primary"}`}>{error || message}</div>}
+      {locked && <div className="mx-auto mt-3 max-w-5xl rounded-xl bg-amber-100 px-4 py-3 text-sm text-amber-950">Post berstatus {POST_STATUS_LABELS[status]} dan bersifat read-only untuk ADMIN.</div>}
+
+      <main className="mx-auto grid max-w-[1500px] grid-cols-1 gap-5 px-3 py-5 sm:px-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="min-w-0 space-y-4">
+          {previewMode ? (
+            <article className="overflow-hidden rounded-3xl bg-surface-container-lowest shadow-sm"><div className="p-5 sm:p-10"><p className="text-sm font-bold uppercase tracking-widest text-secondary">{category}</p><h1 className="mt-3 break-words text-3xl font-bold leading-tight sm:text-5xl">{title || "Judul artikel"}</h1><p className="mt-4 text-on-surface-variant">{effectiveExcerpt}</p><p className="mt-3 text-sm">{authorName} · {publishedAt ? formatDate(new Date(publishedAt).toISOString()) : "Belum diterbitkan"}</p><div className="mt-8 space-y-6">{blocks.map((block) => block.type === "text" ? <div key={block.id} className="prose max-w-none" dangerouslySetInnerHTML={{ __html: block.content }} /> : block.type === "image" && block.url ? <figure key={block.id}><Image src={block.url} alt={block.altText || ""} width={1200} height={800} className="h-auto w-full rounded-2xl" /><figcaption className="mt-2 text-sm text-on-surface-variant">{block.caption}</figcaption></figure> : <div key={block.id} className="rounded-xl bg-surface-container p-4"><b>{block.title || block.type.toUpperCase()}</b><p className="break-all text-sm">{block.url}</p></div>)}</div></div></article>
+          ) : (
+            <>
+              <div className="rounded-2xl bg-surface-container-lowest p-4 shadow-sm sm:p-6"><textarea rows={2} value={title} onChange={(event) => setTitle(event.target.value)} disabled={locked} placeholder="Judul artikel…" className="w-full resize-none bg-transparent text-3xl font-bold leading-tight outline-none placeholder:text-on-surface-variant/40 disabled:opacity-60 sm:text-5xl" /><textarea rows={2} value={excerpt} onChange={(event) => setExcerpt(event.target.value)} disabled={locked} placeholder="Ringkasan opsional — otomatis dari isi artikel jika kosong" className="mt-3 w-full resize-none bg-transparent text-base leading-relaxed text-on-surface-variant outline-none" /></div>
+              {blocks.length === 0 && !locked && <BlockInserter onAdd={(type) => insertBlock(type, -1)} />}
+              {blocks.map((block, index) => <div key={block.id} draggable={!locked} onDragStart={() => setDragIndex(index)} onDragOver={(event) => event.preventDefault()} onDrop={() => dropBlock(index)} className="space-y-3"><BlockItem block={block} index={index} isFirst={index === 0} isLast={index === blocks.length - 1} isDeleting={deletingBlock === block.id} preview={previews[block.id]} stagedFile={stagedFiles[block.id]} disabled={locked} onUpdate={updateBlock} onMove={moveBlock} onRemove={setDeletingBlock} onCancelDelete={() => setDeletingBlock(null)} onConfirmRemove={(id) => { setBlocks((items) => items.filter((item) => item.id !== id)); setDeletingBlock(null); }} onFileSelect={chooseFile} onFileDrop={(id, file) => void upload(id, file)} /><BlockInserter disabled={locked} onAdd={(type) => insertBlock(type, index)} /></div>)}
+            </>
+          )}
+        </section>
+
+        <aside aria-label="Panel pengaturan post" className="sticky top-20 hidden h-[calc(100dvh-6rem)] min-h-0 self-start overflow-y-auto overscroll-contain rounded-2xl bg-surface-container-lowest shadow-sm [scrollbar-gutter:stable] lg:block">
+          <div className="sticky top-0 z-10 border-b border-outline-variant/20 bg-surface-container-lowest/95 p-3 backdrop-blur-xl">
+            {workflowActions}
+            <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-surface-container p-1">{(["metadata", "seo", "history"] as const).map((tab) => <button key={tab} type="button" onClick={() => setDesktopTab(tab)} className={`min-h-10 rounded-lg px-2 text-[11px] font-bold ${desktopTab === tab ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant"}`}>{tab === "history" ? "Riwayat" : tab === "seo" ? "Pratinjau" : "Metadata"}</button>)}</div>
+          </div>
+          <div className="p-4">{desktopTab === "metadata" ? metadataPanel : desktopTab === "seo" ? seoPanel : historyPanel}</div>
+        </aside>
+      </main>
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-outline-variant/30 bg-surface-container-lowest/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"><div className="mx-auto grid max-w-xl grid-cols-4 gap-1 py-2"><button type="button" onClick={() => setSheet("metadata")} className="mobile-editor-action"><span className="material-symbols-outlined">tune</span><span>Metadata</span></button><button type="button" onClick={() => setSheet("seo")} className="mobile-editor-action"><span className="material-symbols-outlined">preview</span><span>Pratinjau</span></button><button type="button" onClick={() => setSheet("history")} className="mobile-editor-action"><span className="material-symbols-outlined">history</span><span>Riwayat</span></button><button type="button" onClick={() => setSheet("actions")} className="mobile-editor-action text-secondary"><span className="material-symbols-outlined">publish</span><span>Aksi</span></button></div></nav>
+
+      {sheet && <div className="fixed inset-0 z-50 md:hidden"><button type="button" aria-label="Tutup panel" onClick={closeSheet} className="absolute inset-0 size-full bg-black/45" /><section ref={sheetRef} role="dialog" aria-modal="true" aria-label={sheet === "seo" ? "Pratinjau" : sheet} className="absolute inset-x-0 bottom-0 max-h-[min(82dvh,760px)] overflow-y-auto overscroll-contain rounded-t-3xl bg-surface-container-lowest px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 shadow-2xl"><div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-outline-variant" /><div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-bold capitalize">{sheet === "history" ? "Riwayat & Aktivitas" : sheet === "seo" ? "Pratinjau" : sheet}</h2><button type="button" onClick={closeSheet} className="grid size-11 place-items-center rounded-full" aria-label="Tutup"><span className="material-symbols-outlined">close</span></button></div>{sheet === "metadata" ? metadataPanel : sheet === "seo" ? seoPanel : sheet === "history" ? historyPanel : workflowActions}</section></div>}
+
+      {completionDialog && <div className="fixed inset-0 z-[60] grid place-items-center px-4"><button type="button" aria-label="Lanjut editing" onClick={closeCompletionDialog} className="absolute inset-0 size-full bg-black/55 backdrop-blur-sm" /><section ref={completionDialogRef} role="dialog" aria-modal="true" aria-labelledby="completion-dialog-title" aria-describedby="completion-dialog-description" className="relative w-full max-w-md rounded-3xl bg-surface-container-lowest p-6 text-center shadow-2xl sm:p-8"><div className="mx-auto grid size-16 place-items-center rounded-full bg-secondary/15 text-secondary"><span className="material-symbols-outlined text-4xl">check_circle</span></div><h2 id="completion-dialog-title" className="mt-5 text-2xl font-black text-primary">{completionDialog === "published" ? "Artikel telah terbit" : "Draft telah tersimpan"}</h2><p id="completion-dialog-description" className="mt-2 text-sm leading-relaxed text-on-surface-variant">{completionDialog === "published" ? "Artikel sudah tersedia untuk pembaca. Anda dapat kembali mengelola artikel lain atau tetap di editor ini." : "Perubahan draft sudah aman tersimpan. Anda dapat kembali ke laman kelola atau melanjutkan editing."}</p><div className="mt-6 grid gap-2"><Link href="/admin" className="flex min-h-12 items-center justify-center rounded-xl bg-secondary px-5 text-sm font-bold text-on-secondary"><span className="material-symbols-outlined mr-2 text-lg">dashboard</span>Kembali ke laman kelola</Link><button type="button" onClick={closeCompletionDialog} className="min-h-12 rounded-xl bg-surface-container px-5 text-sm font-bold text-primary">Lanjut editing</button></div></section></div>}
+    </div>
+  );
+}
+
+function BlockInserter({ onAdd, disabled = false }: { onAdd: (type: PostBlockType) => void; disabled?: boolean }) {
+  return <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-dashed border-outline-variant/40 bg-surface-container-lowest/60 p-2" aria-label="Tambah blok">{(["text", "image", "video", "pdf", "link"] as const).map((type) => <button key={type} type="button" onClick={() => onAdd(type)} disabled={disabled} className="flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-3 text-xs font-bold capitalize text-on-surface-variant hover:bg-surface-container disabled:opacity-40"><span className="material-symbols-outlined text-lg">add</span>{type}</button>)}</div>;
+}

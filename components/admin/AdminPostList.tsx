@@ -1,421 +1,148 @@
-'use client';
+"use client";
 
-import { useState, useTransition } from 'react';
-import Link from 'next/link';
-import { deletePost } from '@/lib/actions/post';
-import { motion, AnimatePresence } from 'framer-motion';
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { deletePostPermanently } from "@/lib/actions/post";
+import { POST_STATUS_LABELS, type AdminPostListItem, type PostStatusValue } from "@/lib/posts/types";
 
-type Post = {
-  id: string;
-  title: string;
-  slug: string;
-  category: string;
-  status: string;
-  createdAt: Date;
-  updatedAt: Date;
+const filters: Array<{ key: "ALL" | PostStatusValue; label: string }> = [
+  { key: "ALL", label: "Semua" }, { key: "DRAFT", label: "Draft" }, { key: "IN_REVIEW", label: "Review" },
+  { key: "SCHEDULED", label: "Terjadwal" }, { key: "PUBLISHED", label: "Terbit" }, { key: "ARCHIVED", label: "Arsip" },
+];
+
+const statusStyle: Record<PostStatusValue, string> = {
+  DRAFT: "bg-slate-100 text-slate-700", IN_REVIEW: "bg-amber-100 text-amber-900", SCHEDULED: "bg-blue-100 text-blue-900",
+  PUBLISHED: "bg-emerald-100 text-emerald-900", ARCHIVED: "bg-zinc-200 text-zinc-700",
 };
 
-export function AdminPostList({ initialPosts }: { initialPosts: Post[] }) {
+const DELETE_HOLD_MS = 3_000;
+
+export function AdminPostList({ initialPosts, currentRole }: { initialPosts: AdminPostListItem[]; currentRole: "ADMIN" | "SUPER_ADMIN" }) {
   const [posts, setPosts] = useState(initialPosts);
-  const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'Published' | 'Draft'>('all');
-  const [isPending, startTransition] = useTransition();
-  const [deleteModal, setDeleteModal] = useState<{ id: string, title: string } | null>(null);
-  const [isSortOpen, setIsSortOpen] = useState(false);
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Post; direction: 'asc' | 'desc' }>({
-    key: 'updatedAt',
-    direction: 'desc',
-  });
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"ALL" | PostStatusValue>("ALL");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<AdminPostListItem | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [holdProgress, setHoldProgress] = useState(0);
+  const deleteDialogRef = useRef<HTMLDivElement>(null);
+  const holdFrameRef = useRef<number | null>(null);
+  const holdStartedAtRef = useRef(0);
+  const deleteCommittedRef = useRef(false);
+  const visible = useMemo(() => posts.filter((post) => {
+    const haystack = [post.title, post.excerpt, post.authorName, post.category, ...post.tags].join(" ").toLocaleLowerCase("id-ID");
+    return (filter === "ALL" || post.status === filter) && haystack.includes(query.toLocaleLowerCase("id-ID"));
+  }), [filter, posts, query]);
+  const reviewCount = posts.filter((post) => post.status === "IN_REVIEW").length;
 
-  const sortOptions = [
-    { label: 'Terbaru Diubah', key: 'updatedAt', direction: 'desc', icon: 'schedule' },
-    { label: 'Terlama Diubah', key: 'updatedAt', direction: 'asc', icon: 'history' },
-    { label: 'Judul A-Z', key: 'title', direction: 'asc', icon: 'sort_by_alpha' },
-    { label: 'Judul Z-A', key: 'title', direction: 'desc', icon: 'sort_by_alpha' },
-  ] as const;
+  const cancelHold = useCallback(() => {
+    if (holdFrameRef.current !== null) cancelAnimationFrame(holdFrameRef.current);
+    holdFrameRef.current = null;
+    if (!deleteCommittedRef.current) setHoldProgress(0);
+  }, []);
 
-  const handleSort = (key: keyof Post, direction: 'asc' | 'desc') => {
-    setSortConfig({ key, direction });
-    setIsSortOpen(false);
+  const closeDeleteDialog = useCallback(() => {
+    if (pending || deleteCommittedRef.current) return;
+    cancelHold();
+    setDeleteTarget(null);
+    setDeleteError("");
+  }, [cancelHold, pending]);
+
+  const openDeleteDialog = (post: AdminPostListItem) => {
+    cancelHold();
+    deleteCommittedRef.current = false;
+    setHoldProgress(0);
+    setDeleteError("");
+    setDeleteTarget(post);
   };
 
-  const sortedPosts = [...posts].sort((a, b) => {
-    if (!sortConfig) return 0;
-    const { key, direction } = sortConfig;
-    
-    const valA = a[key];
-    const valB = b[key];
-
-    if (valA < valB) {
-      return direction === 'asc' ? -1 : 1;
-    }
-    if (valA > valB) {
-      return direction === 'asc' ? 1 : -1;
-    }
-    return 0;
-  });
-
-  const filteredPosts = sortedPosts.filter((post) => {
-    const matchSearch = post.title.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = activeTab === 'all' || post.status === activeTab;
-    return matchSearch && matchStatus;
-  });
-
-  const handleDelete = (id: string, title: string) => {
-    setDeleteModal({ id, title });
-  };
-
-  const confirmDelete = () => {
-    if (!deleteModal) return;
-    const { id } = deleteModal;
-    setDeleteModal(null);
-
+  const remove = useCallback((post: AdminPostListItem) => {
+    deleteCommittedRef.current = true;
     startTransition(async () => {
-      const result = await deletePost(id);
+      const result = await deletePostPermanently(post.id, post.version);
       if (result.success) {
-        setPosts(posts.filter((p) => p.id !== id));
+        setPosts((items) => items.filter((item) => item.id !== post.id));
+        setDeleteTarget(null);
+        setHoldProgress(0);
+        setError("");
       } else {
-        alert(result.error || 'Gagal menghapus');
+        deleteCommittedRef.current = false;
+        setHoldProgress(0);
+        setDeleteError(result.error);
       }
     });
-  };
+  }, []);
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
+  const beginDeleteHold = useCallback(() => {
+    if (!deleteTarget || pending || deleteCommittedRef.current || holdFrameRef.current !== null) return;
+    holdStartedAtRef.current = performance.now();
+    const tick = (now: number) => {
+      const progress = Math.min((now - holdStartedAtRef.current) / DELETE_HOLD_MS, 1);
+      setHoldProgress(progress);
+      if (progress === 1) {
+        holdFrameRef.current = null;
+        remove(deleteTarget);
+        return;
+      }
+      holdFrameRef.current = requestAnimationFrame(tick);
+    };
+    holdFrameRef.current = requestAnimationFrame(tick);
+  }, [deleteTarget, pending, remove]);
 
-  const tabs = [
-    { key: 'all' as const, label: 'Semua Karya' },
-    { key: 'Published' as const, label: 'Published' },
-    { key: 'Draft' as const, label: 'Draft' },
-  ];
+  useEffect(() => {
+    if (!deleteTarget) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const dialog = deleteDialogRef.current;
+    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]") || []);
+    focusable()[0]?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); closeDeleteDialog(); return; }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      cancelHold();
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+      previousFocus?.focus();
+    };
+  }, [cancelHold, closeDeleteDialog, deleteTarget]);
 
   return (
-    <div className="min-h-screen bg-surface-container-lowest pb-24">
-      {/* 1. Header Section - Hidden on Mobile to save space */}
-      <div className="hidden md:block relative pt-12 pb-8 overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-linear-to-b from-surface-container-low/50 to-transparent" />
-        <div className="absolute top-0 right-0 -z-10 opacity-20 blur-[100px] pointer-events-none translate-x-1/2 -translate-y-1/2">
-           <div className="w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-primary-fixed rounded-full" />
+    <main className="min-h-[100dvh] overflow-x-hidden bg-surface-container-low pb-28">
+      <header className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-5 px-4 pb-6 pt-8 sm:px-6 sm:pt-12">
+        <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">CMS PCNU Bolsel</p><h1 className="mt-2 text-3xl font-black text-primary sm:text-5xl">Ruang redaksi</h1><p className="mt-2 text-sm text-on-surface-variant">Kelola draft, review, jadwal, dan artikel live dari satu tempat.</p></div>
+        <Link href="/admin/post/new" className="flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-on-primary"><span className="material-symbols-outlined">add</span>Post baru</Link>
+      </header>
+
+      <section className="mx-auto max-w-7xl px-3 sm:px-6">
+        {reviewCount > 0 && <button type="button" onClick={() => setFilter("IN_REVIEW")} className="mb-4 flex min-h-14 w-full items-center justify-between rounded-2xl bg-amber-100 px-4 text-left text-amber-950"><span><b>{reviewCount} post menunggu review</b><span className="block text-xs">Buka antrean yang membutuhkan keputusan redaksi.</span></span><span className="material-symbols-outlined">arrow_forward</span></button>}
+        <div className="sticky top-0 z-30 mb-5 space-y-2 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest/95 p-2 shadow-sm backdrop-blur-xl">
+          <label className="relative block"><span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari judul, penulis, kategori, atau tag…" className="min-h-12 w-full rounded-xl bg-surface-container pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-secondary/20" /></label>
+          <div className="flex max-w-full gap-1 overflow-x-auto pb-1">{filters.map((item) => <button key={item.key} type="button" onClick={() => setFilter(item.key)} className={`min-h-11 shrink-0 rounded-full px-4 text-xs font-bold ${filter === item.key ? "bg-primary text-on-primary" : "text-on-surface-variant hover:bg-surface-container"}`}>{item.label}<span className="ml-1 opacity-60">{item.key === "ALL" ? posts.length : posts.filter((post) => post.status === item.key).length}</span></button>)}</div>
         </div>
+        {error && <p className="mb-4 rounded-xl bg-error/10 p-3 text-sm text-error">{error}</p>}
 
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant/5">
-                <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-                <span className="font-label text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">Admin Panel</span>
-              </div>
-              <h1 className="text-4xl md:text-5xl font-headline font-black text-primary tracking-tight">
-                Kelola <span className="text-secondary italic">Karya</span>
-              </h1>
-              <p className="text-on-surface-variant font-medium opacity-70">
-                Manajemen konten artikel, berita, dan khazanah literasi.
-              </p>
-            </div>
-
-            <Link href="/admin/post/new" className="hidden md:block">
-              <button className="group relative flex items-center gap-3 px-8 py-4 bg-primary text-on-primary rounded-full font-bold text-sm shadow-xl shadow-primary/20 hover:translate-y-[-2px] transition-all duration-300">
-                <span className="material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform duration-500">add</span>
-                <span>Tambah Karya Baru</span>
-                <div className="absolute inset-0 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-            </Link>
-          </div>
+        <div className={`grid gap-3 ${pending ? "pointer-events-none opacity-60" : ""}`}>
+          {visible.map((post) => <article key={post.id} className="min-w-0 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-4 shadow-sm sm:p-5"><div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap gap-2"><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${statusStyle[post.status]}`}>{POST_STATUS_LABELS[post.status]}</span><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${post.isLive ? "bg-secondary/10 text-secondary" : "bg-surface-container text-on-surface-variant"}`}>{post.isLive ? "Live" : "Tidak live"}</span><span className="rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold">{post.category}</span></div><Link href={`/admin/post/${post.id}`}><h2 className="mt-3 break-words text-lg font-bold leading-snug text-primary hover:text-secondary sm:text-xl">{post.title || "Tanpa judul"}</h2></Link><p className="mt-1 line-clamp-2 text-sm text-on-surface-variant">{post.excerpt || "Belum ada ringkasan."}</p><div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-on-surface-variant"><span>{post.authorName}</span><span>Diubah {formatDate(post.updatedAt)}</span>{post.scheduledAt && <span>Jadwal {formatDate(post.scheduledAt)}</span>}<span>v{post.version}</span></div></div><div className="flex shrink-0 flex-col gap-1 sm:flex-row"><Link href={`/admin/post/${post.id}`} className="grid size-11 place-items-center rounded-full bg-surface-container" aria-label={`Edit ${post.title}`}><span className="material-symbols-outlined">edit</span></Link>{post.isLive && <Link href={`/post/${post.slug}`} target="_blank" className="grid size-11 place-items-center rounded-full bg-surface-container" aria-label={`Buka ${post.title}`}><span className="material-symbols-outlined">open_in_new</span></Link>}{currentRole === "SUPER_ADMIN" && <button type="button" onClick={() => openDeleteDialog(post)} className="grid size-11 place-items-center rounded-full text-error hover:bg-error/10" aria-label={`Hapus ${post.title}`}><span className="material-symbols-outlined">delete</span></button>}</div></div></article>)}
+          {!visible.length && <div className="rounded-3xl border border-dashed border-outline-variant/40 bg-surface-container-lowest p-12 text-center"><span className="material-symbols-outlined text-5xl text-outline-variant">inventory_2</span><h2 className="mt-3 text-xl font-bold">Tidak ada post</h2><p className="mt-1 text-sm text-on-surface-variant">Ubah pencarian atau filter, atau mulai post baru.</p></div>}
         </div>
-      </div>
+      </section>
 
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-12 pt-6 md:pt-0">
-        {/* Mobile Title (Compact) */}
-        <div className="md:hidden mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-headline font-black text-primary tracking-tight">
-            Kelola <span className="text-secondary italic">Karya</span>
-          </h1>
-          <div className="px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant/5 text-[8px] font-bold tracking-widest text-on-surface-variant uppercase">
-            Admin
-          </div>
-        </div>
-        {/* 2. Sticky Kontrol */}
-        <div className="sticky top-16 md:top-20 z-30 mb-4 md:mb-8 p-1.5 md:p-2 rounded-3xl md:rounded-4xl bg-surface-container-low/90 backdrop-blur-xl border border-outline-variant/10 shadow-lg shadow-black/5">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-            
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-0.5 overflow-x-auto w-full lg:w-auto p-0.5 hide-scrollbar">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`relative flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-full text-[9px] md:text-[11px] font-black uppercase tracking-widest transition-all duration-500 whitespace-nowrap
-                    ${activeTab === tab.key
-                      ? 'bg-primary text-on-primary shadow-md'
-                      : 'text-on-surface-variant hover:text-primary'
-                    }`}
-                >
-                  {activeTab === tab.key && (
-                    <motion.div
-                      layoutId="activeTabAdmin"
-                      className="absolute inset-0 bg-primary rounded-full -z-10"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                    />
-                  )}
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Search & Sort */}
-            <div className="flex items-center gap-3 w-full lg:w-auto pr-2">
-              <div className="relative flex-1 lg:w-80 group">
-                <input
-                  type="text"
-                  placeholder="Cari karya anda..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-surface-container-highest/50 border border-outline-variant/10 rounded-full py-3 md:py-4 pl-10 md:pl-12 pr-6 text-xs md:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/40"
-                />
-                <span className="absolute left-3.5 md:left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant/40 group-focus-within:text-primary transition-colors text-lg md:text-xl">
-                  search
-                </span>
-              </div>
-              
-              <div className="relative">
-                <button 
-                  onClick={() => setIsSortOpen(!isSortOpen)}
-                  className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border border-outline-variant/10 transition-all relative
-                    ${isSortOpen ? 'bg-primary text-on-primary' : 'bg-surface-container-highest/50 text-on-surface-variant hover:border-primary/30'}`}
-                  title="Opsi Pengurutan"
-                >
-                  <span className={`material-symbols-outlined transition-transform duration-500 text-lg md:text-xl ${isSortOpen ? 'rotate-180' : ''}`}>
-                    filter_list
-                  </span>
-                </button>
-
-                <AnimatePresence>
-                  {isSortOpen && (
-                    <>
-                      <div 
-                        className="fixed inset-0 z-40" 
-                        onClick={() => setIsSortOpen(false)} 
-                      />
-                      <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        className="absolute right-0 mt-4 w-64 bg-surface-container-low/95 backdrop-blur-2xl border border-outline-variant/10 rounded-3xl shadow-2xl z-50 overflow-hidden"
-                      >
-                        <div className="p-2 space-y-1">
-                          {sortOptions.map((opt) => {
-                            const isActive = sortConfig.key === opt.key && sortConfig.direction === opt.direction;
-                            return (
-                              <button
-                                key={`${opt.key}-${opt.direction}`}
-                                onClick={() => handleSort(opt.key as keyof Post, opt.direction)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all
-                                  ${isActive 
-                                    ? 'bg-primary text-on-primary' 
-                                    : 'text-on-surface-variant hover:bg-surface-container-highest'
-                                  }`}
-                              >
-                                <span className={`material-symbols-outlined text-[18px] ${isActive ? 'text-secondary' : 'opacity-40'}`}>
-                                  {opt.icon}
-                                </span>
-                                <span className="uppercase tracking-widest">{opt.label}</span>
-                                {isActive && (
-                                  <span className="material-symbols-outlined ml-auto text-[16px]">check_circle</span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Area List Karya */}
-        <div className={`space-y-4 ${isPending ? 'opacity-50 pointer-events-none' : ''}`}>
-
-          <AnimatePresence mode="popLayout" initial={false}>
-            {filteredPosts.map((post, index) => (
-              <motion.div
-                key={post.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ delay: index * 0.05, duration: 0.4 }}
-                className="group relative bg-surface-container-lowest border border-outline-variant/10 rounded-2xl md:rounded-3xl p-3 md:p-6 hover:border-primary/30 hover:shadow-xl hover:shadow-black/5 transition-all duration-500"
-              >
-                <div className="flex flex-row items-center gap-3 md:gap-6">
-                  {/* Icon / Category Thumbnail */}
-                  <div className="w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-surface-container-low flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-all duration-500 shrink-0">
-                    <span className="material-symbols-outlined text-lg md:text-3xl">
-                      {post.category === 'Berita' ? 'newspaper' : 'article'}
-                    </span>
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
-                      <span className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-secondary truncate">{post.category}</span>
-                      <span className="w-1 h-1 rounded-full bg-outline-variant/30 shrink-0" />
-                      <span className="text-[7px] md:text-[10px] font-bold text-on-surface-variant opacity-60 truncate">{formatDate(post.updatedAt)}</span>
-                    </div>
-                    <Link href={`/admin/post/${post.id}`}>
-                      <h3 className="text-sm md:text-xl font-headline font-bold text-on-surface group-hover:text-primary transition-colors leading-tight line-clamp-1">
-                        {post.title}
-                      </h3>
-                    </Link>
-                    <div className="flex md:hidden mt-1.5">
-                       <div className={`px-2 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest
-                        ${post.status === 'Published'
-                          ? 'bg-primary/10 text-primary border border-primary/20'
-                          : 'bg-surface-container-highest text-on-surface-variant border border-outline-variant/10'
-                        }`}>
-                        {post.status}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Status & Actions */}
-                  <div className="flex items-center gap-2 md:gap-6 shrink-0">
-                    {/* Status Badge (Desktop) */}
-                    <div className={`hidden md:block px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-sm
-                      ${post.status === 'Published'
-                        ? 'bg-primary/10 text-primary border border-primary/20'
-                        : 'bg-surface-container-highest text-on-surface-variant border border-outline-variant/10'
-                      }`}>
-                      {post.status}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-1 md:gap-2">
-                       <Link
-                        href={`/post/${post.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-surface-container-low text-on-surface-variant hover:bg-secondary hover:text-on-secondary transition-all duration-500 shadow-sm"
-                        title="Lihat Pratinjau"
-                      >
-                        <span className="material-symbols-outlined text-sm md:text-lg">visibility</span>
-                      </Link>
-                       <Link
-                        href={`/admin/post/${post.id}`}
-                        className="w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-surface-container-low text-on-surface-variant hover:bg-primary hover:text-on-primary transition-all duration-500 shadow-sm"
-                        title="Edit Konten"
-                      >
-                        <span className="material-symbols-outlined text-sm md:text-lg">edit</span>
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(post.id, post.title)}
-                        className="w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-surface-container-low text-on-surface-variant hover:bg-error hover:text-on-error transition-all duration-500 shadow-sm"
-                        title="Hapus"
-                      >
-                        <span className="material-symbols-outlined text-sm md:text-lg">delete</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-
-          {filteredPosts.length === 0 && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="py-32 text-center bg-surface-container-lowest rounded-4xl border border-dashed border-outline-variant/30"
-            >
-              <div className="inline-flex w-24 h-24 items-center justify-center rounded-4xl bg-surface-container-low mb-6 text-outline-variant/40">
-                <span className="material-symbols-outlined text-5xl">inventory_2</span>
-              </div>
-              <h3 className="text-2xl font-headline font-black text-primary mb-2">
-                {search ? 'Pencarian Nihil' : 'Belum Ada Jejak'}
-              </h3>
-              <p className="text-sm text-on-surface-variant/60 font-medium max-w-sm mx-auto">
-                {search
-                  ? `Kata kunci "${search}" tidak ditemukan di lemari arsip kami.`
-                  : 'Anda belum melahirkan karya apapun. Mari mulai goreskan tinta sejarah!'
-                }
-              </p>
-              {!search && (
-                <Link href="/admin/post/new" className="inline-block mt-8">
-                  <button className="px-8 py-4 bg-primary text-on-primary rounded-full font-bold text-xs tracking-widest uppercase shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
-                    Mulai Berkarya
-                  </button>
-                </Link>
-              )}
-            </motion.div>
-          )}
-        </div>
-      </div>
-
-      {/* Floating Action Button (Mobile) */}
-      <Link href="/admin/post/new" className="md:hidden fixed bottom-10 right-8 z-50">
-        <button className="w-16 h-16 rounded-2xl bg-primary text-on-primary shadow-2xl flex items-center justify-center overflow-hidden active:scale-95 transition-all">
-          <span className="material-symbols-outlined text-3xl">add</span>
-          <div className="absolute inset-0 bg-white/20 opacity-0 active:opacity-100 transition-opacity" />
-        </button>
-      </Link>
-
-      {/* 3. Custom Modal Delete */}
-      <AnimatePresence>
-        {deleteModal && (
-          <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setDeleteModal(null)}
-              className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              className="relative w-full max-w-md bg-surface-container-lowest rounded-4xl p-10 shadow-2xl border border-outline-variant/20 overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 p-8 opacity-5 text-error">
-                <span className="material-symbols-outlined text-9xl">delete</span>
-              </div>
-              
-              <div className="relative flex flex-col items-center text-center">
-                <div className="w-20 h-20 rounded-4xl bg-error/10 flex items-center justify-center text-error mb-8">
-                  <span className="material-symbols-outlined text-4xl">warning</span>
-                </div>
-                
-                <h3 className="text-2xl font-headline font-black text-on-surface mb-4">Hapus Permanen?</h3>
-                <p className="text-sm text-on-surface-variant font-medium leading-relaxed mb-10">
-                  Anda akan menghapus <span className="text-primary font-bold">"{deleteModal.title}"</span>. Tindakan ini merupakan langkah akhir dan tidak dapat dikembalikan.
-                </p>
-                
-                <div className="flex flex-col gap-3 w-full">
-                  <button
-                    onClick={confirmDelete}
-                    className="w-full py-4 rounded-full bg-error text-on-error font-bold text-xs tracking-widest uppercase shadow-lg shadow-error/20 hover:scale-[1.02] active:scale-95 transition-all"
-                  >
-                    Ya, Hapus Karya
-                  </button>
-                  <button
-                    onClick={() => setDeleteModal(null)}
-                    className="w-full py-4 rounded-full border border-outline-variant/30 text-on-surface-variant font-bold text-xs tracking-widest uppercase hover:bg-surface-container-high transition-all"
-                  >
-                    Batalkan
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
+      {deleteTarget && <div className="fixed inset-0 z-50 grid place-items-center px-4"><button type="button" aria-label="Batalkan penghapusan" onClick={closeDeleteDialog} disabled={pending} className="absolute inset-0 size-full bg-black/55 backdrop-blur-sm disabled:cursor-wait" /><div ref={deleteDialogRef} role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description" className="relative w-full max-w-md rounded-3xl bg-surface-container-lowest p-6 shadow-2xl sm:p-8"><div className="grid size-14 place-items-center rounded-full bg-error/10 text-error"><span className="material-symbols-outlined text-3xl">delete_forever</span></div><h2 id="delete-dialog-title" className="mt-5 text-2xl font-black text-primary">Hapus post secara permanen?</h2><p id="delete-dialog-description" className="mt-2 text-sm leading-relaxed text-on-surface-variant">Post <strong className="text-primary">“{deleteTarget.title}”</strong> beserta riwayat revisinya akan dihapus dan tidak dapat dipulihkan.</p>{deleteTarget.isLive && <p className="mt-3 rounded-xl bg-error/10 px-3 py-2 text-sm font-bold text-error">Post ini sedang live dan akan langsung hilang dari website.</p>}{deleteError && <p role="alert" className="mt-3 rounded-xl bg-error/10 px-3 py-2 text-sm text-error">{deleteError}</p>}<div className="mt-6 grid gap-2"><button type="button" onClick={closeDeleteDialog} disabled={pending} className="min-h-12 rounded-xl bg-surface-container px-5 text-sm font-bold text-primary disabled:opacity-50">Batal</button><button type="button" disabled={pending} onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); beginDeleteHold(); }} onPointerUp={cancelHold} onPointerCancel={cancelHold} onKeyDown={(event) => { if ((event.key === "Enter" || event.key === " ") && !event.repeat) { event.preventDefault(); beginDeleteHold(); } }} onKeyUp={(event) => { if (event.key === "Enter" || event.key === " ") cancelHold(); }} onBlur={cancelHold} onContextMenu={(event) => event.preventDefault()} className="relative min-h-14 touch-none overflow-hidden rounded-xl border border-error/30 bg-error/10 px-5 text-sm font-black text-error select-none disabled:cursor-wait disabled:opacity-60"><span aria-hidden="true" className="absolute inset-y-0 left-0 bg-error/20" style={{ width: `${holdProgress * 100}%` }} /><span className="relative flex items-center justify-center gap-2"><span className={`material-symbols-outlined text-lg ${pending ? "animate-spin" : ""}`}>{pending ? "progress_activity" : "touch_app"}</span>{pending ? "Menghapus post…" : holdProgress > 0 ? `Terus tahan… ${Math.max(1, Math.ceil((1 - holdProgress) * 3))} detik` : "Tahan 3 detik untuk hapus"}</span></button></div></div></div>}
+    </main>
   );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(value));
 }

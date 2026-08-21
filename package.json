@@ -7,6 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "lint:posts": "eslint app/admin/post app/post components/admin/PostEditor.tsx components/admin/BlockItem.tsx components/admin/TiptapEditor.tsx components/admin/AdminPostList.tsx components/post lib/actions/post.ts lib/posts",
+    "typecheck": "tsc --noEmit --incremental false",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "migrate:posts": "tsx scripts/migrate-post-editorial.ts",
     "postinstall": "prisma generate",
     "seed": "npx tsx scripts/seed-admin.ts",
     "seed:pcnu": "npx tsx scripts/seed-pcnu.ts",
@@ -16,12 +21,15 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
     "@hono/node-server": "^1.19.11",
+    "@prisma/client": "~6.19.0",
     "@react-pdf/renderer": "^4.3.2",
     "@tailwindcss/typography": "^0.5.19",
-    "@tiptap/extension-text-align": "^3.20.4",
-    "@tiptap/pm": "^3.20.4",
-    "@tiptap/react": "^3.20.4",
-    "@tiptap/starter-kit": "^3.20.4",
+    "@tiptap/extension-link": "3.21.0",
+    "@tiptap/extension-placeholder": "3.21.0",
+    "@tiptap/extension-text-align": "3.21.0",
+    "@tiptap/pm": "3.21.0",
+    "@tiptap/react": "3.21.0",
+    "@tiptap/starter-kit": "3.21.0",
     "@types/bcryptjs": "^2.4.6",
     "@uploadthing/react": "^7.3.3",
     "bcryptjs": "^3.0.3",
@@ -35,9 +43,9 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-pdf": "^10.4.1",
+    "sanitize-html": "^2.17.0",
     "uploadthing": "^7.7.4",
-    "zod": "^4.3.6",
-    "@prisma/client": "~6.19.0"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
@@ -45,11 +53,14 @@
     "@types/nodemailer": "^7.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sanitize-html": "^2.16.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
     "prisma": "~6.19.0",
     "tailwindcss": "^4.2.2",
-    "typescript": "^5"
+    "tsx": "^4.23.12",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   },
   "overrides": {
     "effect": "^3.20.0"
