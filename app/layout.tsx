@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { LenisProvider } from "@/components/providers/LenisProvider";
+import { SITE_URL } from "@/lib/site";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -16,7 +17,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://pcnubolsel.or.id"),
+  metadataBase: new URL(SITE_URL),
   title: "PCNU Bolsel - Portal Berita Resmi",
   description: "Portal Berita Resmi Nahdlatul Ulama Bolaang Mongondow Selatan",
 };

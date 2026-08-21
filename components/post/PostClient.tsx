@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getYouTubeEmbedUrl, readingTimeMinutes } from "@/lib/posts/domain";
+import { SITE_URL } from "@/lib/site";
 import type { PostBlock, PublicPost } from "@/lib/posts/types";
 
 export default function PostClient({ post, relatedPosts }: { post: PublicPost; relatedPosts: PublicPost[] }) {
@@ -17,15 +18,15 @@ export default function PostClient({ post, relatedPosts }: { post: PublicPost; r
     update(); window.addEventListener("scroll", update, { passive: true }); window.addEventListener("resize", update);
     return () => { window.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
   }, []);
+  const canonical = `${SITE_URL}/post/${post.slug}`;
   const share = async () => {
-    const data = { title: post.title, text: post.excerpt, url: window.location.href };
+    const data = { title: post.title, text: post.excerpt, url: canonical };
     try {
       if (navigator.share) await navigator.share(data);
-      else { await navigator.clipboard.writeText(window.location.href); setShareMessage("Tautan disalin"); }
+      else { await navigator.clipboard.writeText(canonical); setShareMessage("Tautan disalin"); }
     } catch { /* Pengguna membatalkan share sheet. */ }
   };
   const readTime = readingTimeMinutes(post.blocks);
-  const canonical = `${process.env.NEXT_PUBLIC_APP_URL || "https://pcnubolsel.or.id"}/post/${post.slug}`;
   const published = formatDate(post.publishedAt);
   const changed = new Date(post.updatedAt).getTime() > new Date(post.publishedAt).getTime() + 60_000;
 

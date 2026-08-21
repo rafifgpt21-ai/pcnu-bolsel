@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import PostClient from "@/components/post/PostClient";
 import { getPostBySlug, getPublishedPosts } from "@/lib/actions/post";
+import { SITE_URL } from "@/lib/site";
 
 export const revalidate = 60;
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pcnubolsel.or.id";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -12,8 +12,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!post) return { title: "Artikel tidak ditemukan | PCNU Bolsel", robots: { index: false, follow: false } };
   const title = post.seoTitle || post.title;
   const description = post.seoDescription || post.excerpt;
-  const canonical = `${siteUrl}/post/${post.slug}`;
-  const images = [post.thumbnail || `${siteUrl}/brand/pcnu-bolsel-favicon.png`];
+  const canonical = `${SITE_URL}/post/${post.slug}`;
+  const images = [post.thumbnail || `${SITE_URL}/brand/pcnu-bolsel-favicon.png`];
   return {
     title: `${title} | PCNU Bolsel`,
     description,
@@ -39,8 +39,8 @@ export default async function SinglePostPage({ params }: { params: Promise<{ slu
   const jsonLd = {
     "@context": "https://schema.org", "@type": "NewsArticle", headline: post.title, description: post.excerpt,
     image: post.thumbnail ? [post.thumbnail] : undefined, datePublished: post.publishedAt, dateModified: post.updatedAt,
-    mainEntityOfPage: `${siteUrl}/post/${post.slug}`, author: { "@type": "Person", name: post.authorName },
-    publisher: { "@type": "Organization", name: "PCNU Bolaang Mongondow Selatan", logo: { "@type": "ImageObject", url: `${siteUrl}/brand/pcnu-bolsel-favicon.png` } },
+    mainEntityOfPage: `${SITE_URL}/post/${post.slug}`, author: { "@type": "Person", name: post.authorName },
+    publisher: { "@type": "Organization", name: "PCNU Bolaang Mongondow Selatan", logo: { "@type": "ImageObject", url: `${SITE_URL}/brand/pcnu-bolsel-favicon.png` } },
   };
   return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} /><PostClient post={post} relatedPosts={relatedPosts} /></>;
 }
