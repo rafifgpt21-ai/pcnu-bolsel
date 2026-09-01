@@ -1,7 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { ReactNode, useState, useEffect } from 'react';
+import { type CSSProperties, type ReactNode, useEffect, useRef } from 'react';
 
 interface ScrollRevealProps {
   children: ReactNode;
@@ -11,53 +10,30 @@ interface ScrollRevealProps {
   duration?: number;
 }
 
-export default function ScrollReveal({
-  children,
-  delay = 0,
-  direction = 'up',
-  className = '',
-  duration = 0.6,
-}: ScrollRevealProps) {
-  const [isMobile, setIsMobile] = useState(false);
-
+export default function ScrollReveal({ children, delay = 0, direction = 'up', className = '', duration = 0.6 }: ScrollRevealProps) {
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const element = ref.current;
+    if (!element) return;
+    const motion = window.matchMedia('(min-width: 769px) and (hover: hover) and (prefers-reduced-motion: no-preference)');
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        element.dataset.reveal = 'visible';
+        observer.unobserve(element);
+      }
+    }, { threshold: 0.05 });
+    const sync = () => {
+      observer.disconnect();
+      delete element.dataset.reveal;
+      // Content is visible in SSR, with JS disabled, and on touch devices.
+      if (motion.matches && element.getBoundingClientRect().top >= window.innerHeight) {
+        element.dataset.reveal = 'pending';
+        observer.observe(element);
+      }
+    };
+    sync();
+    motion.addEventListener('change', sync);
+    return () => { observer.disconnect(); motion.removeEventListener('change', sync); };
   }, []);
-
-  const directions = {
-    up: { y: 40 },
-    down: { y: -40 },
-    left: { x: 40 },
-    right: { x: -40 },
-  };
-
-  if (isMobile) {
-    return <div className={className}>{children}</div>;
-  }
-
-  return (
-    <motion.div
-      initial={{ 
-        opacity: 0, 
-        ...directions[direction] 
-      }}
-      whileInView={{ 
-        opacity: 1, 
-        y: 0, 
-        x: 0 
-      }}
-      viewport={{ once: true, margin: '-100px' }}
-      transition={{
-        duration: duration,
-        delay: delay,
-        ease: [0.21, 0.47, 0.32, 0.98],
-      }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div ref={ref} className={`public-reveal ${className}`} style={{ '--reveal-delay': `${delay}s`, '--reveal-duration': `${duration}s`, '--reveal-x': direction === 'left' ? '20px' : direction === 'right' ? '-20px' : '0px', '--reveal-y': direction === 'up' ? '20px' : direction === 'down' ? '-20px' : '0px' } as CSSProperties}>{children}</div>;
 }

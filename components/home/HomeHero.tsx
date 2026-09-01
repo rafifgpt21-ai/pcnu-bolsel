@@ -1,14 +1,12 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import Link from 'next/link';
 import HeroSearch from '@/components/HeroSearch';
-import { ReactNode } from 'react';
 
 export default function HomeHero() {
   return (
     <section 
-      className="relative min-h-[90vh] flex flex-col items-center justify-center px-4 sm:px-8 md:px-12 text-center overflow-hidden pt-20 animate-in fade-in duration-1000"
+      className="relative min-h-[calc(100svh-var(--site-header-height))] md:min-h-[90vh] flex flex-col items-center justify-center px-4 sm:px-8 md:px-12 text-center overflow-hidden py-10 md:pt-20 md:pb-10 animate-in fade-in duration-1000"
     >
       {/* Dynamic Background Elements */}
       <div className="absolute inset-0 -z-10 bg-surface overflow-hidden">
@@ -20,7 +18,7 @@ export default function HomeHero() {
       </div>
 
       {/* Impact Chips (Floating Glass) */}
-      <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-10 w-full max-w-4xl mx-auto z-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 fill-mode-both">
+      <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-6 md:mb-10 w-full max-w-4xl mx-auto z-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 fill-mode-both">
         {[
           { icon: 'account_balance', text: '7 MWC' },
           { icon: 'location_city', text: '81 Ranting' },
@@ -28,20 +26,20 @@ export default function HomeHero() {
         ].map((chip, i) => (
           <div 
             key={i} 
-            className="group relative bg-surface/90 md:bg-surface/60 hover:bg-surface/90 md:backdrop-blur-xl px-5 sm:px-7 py-2.5 sm:py-3 rounded-full text-[11px] sm:text-xs font-label font-bold tracking-[0.2em] uppercase text-primary flex items-center gap-2 shadow-lg shadow-primary/5 border border-primary/10 md:border-primary/20 hover:border-primary/40 transition-all duration-300 cursor-default"
+            className="group relative bg-surface/90 md:bg-surface/60 hover:bg-surface/90 md:backdrop-blur-xl px-3 sm:px-7 py-2.5 sm:py-3 rounded-full text-xs sm:text-xs font-label font-bold tracking-wider sm:tracking-[0.2em] uppercase text-primary flex items-center gap-2 shadow-lg shadow-primary/5 border border-primary/10 md:border-primary/20 hover:border-primary/40 transition-all duration-300 cursor-default"
           >
-            <span className="material-symbols-outlined text-[16px] sm:text-[18px] text-secondary group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300">{chip.icon}</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px] sm:text-[18px] text-public-accent group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300">{chip.icon}</span>
             <span className="opacity-90">{chip.text}</span>
           </div>
         ))}
       </div>
 
       {/* Main Typography */}
-      <div className="relative mb-12 max-w-5xl z-10 group animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-both">
+      <div className="relative mb-8 md:mb-12 max-w-5xl z-10 group animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-both">
         <h1 className="font-headline font-black text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[5.5rem] tracking-tight text-on-surface leading-[1.1] sm:leading-[1.05]">
           <span className="block mb-2">Portal Resmi,</span>
           <span className="relative inline-block mt-1 sm:mt-2">
-            <span className="relative z-10 text-transparent bg-clip-text bg-linear-to-r from-primary via-secondary to-primary" style={{ backgroundSize: '200% auto', animation: 'gradient 8s linear infinite' }}>
+            <span className="relative z-10 text-transparent bg-clip-text bg-linear-to-r from-primary via-public-accent to-primary" style={{ backgroundSize: '200% auto', animation: 'gradient 8s linear infinite' }}>
               Nahdlatul Ulama
             </span>
           </span>
@@ -53,16 +51,16 @@ export default function HomeHero() {
       </div>
 
       {/* Search Bar Area */}
-      <div className="w-full max-w-3xl px-4 z-20 flex justify-center animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both">
+      <div className="w-full max-w-3xl md:px-4 z-20 flex justify-center animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both">
         <HeroSearch />
       </div>
 
       {/* Primary CTA Scroll Down */}
-      <div className="mt-16 z-20 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500 fill-mode-both">
-        <Link href="#arsip" scroll={true} className="group flex flex-col items-center gap-4 font-headline font-bold text-lg tracking-tight text-primary hover:text-secondary transition-all duration-500">
-          <span className="opacity-60 text-[10px] sm:text-xs tracking-[0.3em] font-label mb-1 group-hover:opacity-100 transition-opacity uppercase drop-shadow-sm">Jelajah Bersama</span>
+      <div className="mt-8 md:mt-16 z-20 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500 fill-mode-both">
+        <Link href="#arsip" scroll={true} className="group flex flex-col items-center gap-4 font-headline font-bold text-lg tracking-tight text-primary hover:text-public-accent transition-all duration-500">
+          <span className="opacity-90 text-xs sm:text-xs tracking-[0.3em] font-label mb-1 group-hover:opacity-100 transition-opacity uppercase drop-shadow-sm">Jelajah Bersama</span>
           <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-surface/80 border border-primary/20 flex items-center justify-center shadow-lg shadow-primary/10 md:backdrop-blur-md group-hover:-translate-y-1 transition-all">
-             <span className="material-symbols-outlined md:animate-bounce text-xl">south</span>
+             <span aria-hidden="true" className="material-symbols-outlined md:animate-bounce text-xl">south</span>
           </div>
         </Link>
       </div>

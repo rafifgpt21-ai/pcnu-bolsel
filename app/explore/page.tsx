@@ -14,19 +14,21 @@ export default async function KaryaPage({
   searchParams: Promise<{ search?: string; category?: string }>;
 }) {
   const { search, category } = await searchParams;
-  const posts = await getPosts({ 
-    status: 'Published',
-    search: search || undefined,
-    category: category && category !== 'Semua' ? category : undefined
-  });
 
   return (
-    <main className="min-h-screen bg-surface-container-lowest">
-      <Suspense fallback={<ExploreSkeleton />}>
-        <ExploreClient initialPosts={posts} />
+    <div className="min-h-screen bg-surface-container-lowest">
+      <Suspense fallback={<ExploreSkeleton featured={!search && (!category || category === "Semua")} />}>
+        <ExploreResults search={search} category={category} />
       </Suspense>
-    </main>
+    </div>
   );
 }
 
-
+async function ExploreResults({ search, category }: { search?: string; category?: string }) {
+  const posts = await getPosts({
+    status: 'Published',
+    search: search || undefined,
+    category: category && category !== 'Semua' ? category : undefined,
+  });
+  return <ExploreClient initialPosts={posts} />;
+}

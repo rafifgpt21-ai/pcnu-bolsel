@@ -27,7 +27,8 @@ export const NavLinks = ({ isAdmin }: NavLinksProps) => {
           <Link
             key={link.href}
             href={link.href}
-            className={`transition-colors duration-300 font-headline font-medium tracking-tight ${
+            aria-current={isActive ? 'page' : undefined}
+            className={`inline-flex min-h-11 items-center transition-colors duration-200 font-headline font-medium tracking-tight ${
               isActive 
                 ? "text-[#016E45]" 
                 : "text-[#1b1b1d]/70 hover:text-[#016E45]"

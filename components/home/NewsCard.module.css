@@ -1,0 +1,175 @@
+.shell {
+  container: news-card / inline-size;
+  min-width: 0;
+  height: 100%;
+}
+
+.card {
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  border: 1px solid rgb(1 110 69 / 12%);
+  border-radius: 24px;
+  background: var(--color-surface-container-lowest);
+  box-shadow: 0 4px 20px -14px rgb(1 110 69 / 24%);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: rgb(1 110 69 / 38%);
+  box-shadow: 0 14px 32px -18px rgb(1 110 69 / 30%);
+}
+
+/* Always a full-width photograph above the text, at every breakpoint.
+   Padding keeps the complete photo clear of the rounded frame corners. */
+.media {
+  position: relative;
+  min-width: 0;
+  flex: 0 0 auto;
+  margin: 10px 10px 0;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  background: #f0f4f1;
+}
+
+.image {
+  padding: 10px;
+  object-fit: contain;
+  object-position: center;
+}
+
+.placeholder {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 16px 12px;
+}
+
+.metadata {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.category {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  border-radius: 100px;
+  background: rgb(1 110 69 / 6%);
+  padding: 6px 10px;
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.category > span {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-secondary);
+}
+
+.date {
+  color: var(--color-on-surface-variant);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-primary);
+  font-family: var(--font-headline);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+
+.excerpt {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin: 0;
+  color: var(--color-on-surface-variant);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.footer {
+  margin-top: auto;
+  border-top: 1px solid rgb(1 110 69 / 10%);
+  padding-top: 8px;
+}
+
+.cta {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.cta .arrow {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: rgb(1 110 69 / 7%);
+  transition: background-color 180ms ease;
+}
+
+.card:hover .arrow { background: rgb(1 110 69 / 14%); }
+
+/* Only spacing, typography and the landscape frame change with card width. */
+@container news-card (min-width: 360px) {
+  .card { border-radius: 28px; }
+  .media { margin: 12px 12px 0; aspect-ratio: 3 / 2; border-radius: 18px; }
+  .body { gap: 16px; padding: 22px 22px 16px; }
+  .title { font-size: 1.375rem; }
+}
+
+@container news-card (min-width: 520px) {
+  .media { aspect-ratio: 16 / 9; }
+  .body { gap: 18px; padding: 24px 28px 18px; }
+  .title { font-size: 1.5rem; }
+}
+
+@container news-card (min-width: 720px) {
+  .media { margin: 16px 16px 0; }
+  .body { padding: 28px 32px 22px; }
+  .title { font-size: 1.625rem; }
+}

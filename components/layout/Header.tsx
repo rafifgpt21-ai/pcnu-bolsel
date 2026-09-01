@@ -9,24 +9,25 @@ export const Header = async () => {
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
 
   return (
-    <nav className="fixed top-0 w-full z-50 bg-[#fcf8fa]/80 backdrop-blur-xl transition-all duration-300">
-      <div className="w-full px-6 md:px-8 lg:px-12 xl:px-24 flex justify-between items-center h-20">
-        <div className="flex items-center gap-4">
+    <nav aria-label="Navigasi utama" className="public-ui fixed top-0 h-[var(--site-header-height)] w-full z-50 border-b border-outline-variant/20 bg-[#fcf8fa]/95 md:bg-[#fcf8fa]/90 backdrop-blur-xl transition-colors duration-200">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-10 focus:rounded-xl focus:bg-white focus:p-3 focus:text-primary">Lewati ke konten</a>
+      <div className="w-full px-4 md:px-8 lg:px-12 xl:px-24 flex justify-between gap-2 items-center h-full">
+        <div className="flex min-w-0 items-center gap-1 sm:gap-4">
           <MobileMenu isAdmin={isAdmin} />
-          <div className="text-xl font-bold tracking-tighter text-[#0F172A] font-headline">
+          <div className="min-w-0 text-lg sm:text-xl font-bold tracking-tight text-[#0F172A] font-headline">
             <Link href="/" className="flex min-h-11 items-center">PCNU Bolsel</Link>
           </div>
         </div>
         
         <NavLinks isAdmin={isAdmin} />
         
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-2">
           {session ? (
             <details className="relative group cursor-pointer">
-              <summary className="list-none flex items-center gap-3 bg-secondary/5 px-4 py-2 rounded-xl text-[#016E45] font-headline font-medium transition-all hover:bg-secondary/10">
-                <span className="capitalize hidden sm:inline">{session.user?.name || "User"}</span>
+              <summary aria-label="Menu akun" className="list-none flex min-h-11 min-w-11 items-center gap-2 bg-secondary/5 px-2 sm:px-4 py-2 rounded-xl text-[#016E45] font-headline font-medium transition-colors hover:bg-secondary/10">
+                <span className="max-w-32 truncate capitalize hidden sm:inline">{session.user?.name || "User"}</span>
                 {session.user?.role && (
-                  <span className="text-[10px] bg-[#016E45] text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-xs bg-[#016E45] text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
                     {session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN" ? "Admin" : session.user.role}
                   </span>
                 )}
@@ -37,7 +38,7 @@ export const Header = async () => {
                   <div className="px-2 py-1.5 text-xs font-medium text-gray-400 uppercase tracking-widest">Akun</div>
                   <div className="h-px bg-gray-100 my-1 mx-2"></div>
                   {isSuperAdmin && (
-                    <Link href="/admin/users" className="w-full text-left font-headline font-medium px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-all flex items-center gap-2">
+                    <Link href="/admin/users" className="min-h-11 w-full text-left font-headline font-medium px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-all flex items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="19" cy="11" r="3"/></svg>
                       Kelola User
                     </Link>
@@ -46,7 +47,7 @@ export const Header = async () => {
                     "use server";
                     await signOut();
                   }}>
-                    <button type="submit" className="w-full text-left font-headline font-medium px-3 py-2 text-[#e11d48] hover:bg-[#e11d48]/5 rounded-lg transition-all flex items-center gap-2">
+                    <button type="submit" className="min-h-11 w-full text-left font-headline font-medium px-3 py-2 text-[#e11d48] hover:bg-[#e11d48]/5 rounded-lg transition-all flex items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
                       Logout
                     </button>
@@ -55,7 +56,7 @@ export const Header = async () => {
               </div>
             </details>
           ) : (
-            <Link href="/admin/login" className="inline-flex min-h-11 items-center text-[#016E45] font-headline font-medium px-6 py-2 rounded-xl hover:bg-secondary/5 transition-all text-sm sm:text-base">
+            <Link href="/admin/login" className="inline-flex min-h-11 items-center text-[#016E45] font-headline font-medium px-3 sm:px-6 py-2 rounded-xl hover:bg-secondary/5 transition-colors text-base">
               Masuk
             </Link>
           )}

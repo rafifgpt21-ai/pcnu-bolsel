@@ -42,7 +42,7 @@ export default function RootLayout({
       >
         <LenisProvider>
           <Header />
-          <main className="flex-1 pt-20">
+          <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 pt-[var(--site-header-height)]">
             {children}
           </main>
           <Footer />

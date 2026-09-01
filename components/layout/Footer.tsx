@@ -1,7 +1,6 @@
 "use client";
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -14,22 +13,22 @@ export const Footer = () => {
   ];
 
   return (
-    <footer className="w-full bg-[#0A0F1D] text-[#fcf8fa] pt-24 pb-12 relative overflow-hidden">
+    <footer className="public-ui public-footer w-full bg-[#0A0F1D] text-[#fcf8fa] pt-12 md:pt-24 pb-[max(2rem,env(safe-area-inset-bottom))] md:pb-12 relative overflow-hidden">
       {/* Decorative Gradient Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-[#016E45]/10 blur-[120px] rounded-full -z-10 pointer-events-none" />
       
-      <div className="w-full px-6 md:px-8 lg:px-12 xl:px-24">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-20">
+      <div className="w-full px-4 md:px-8 lg:px-12 xl:px-24">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 lg:gap-8 mb-10 md:mb-20">
           
           {/* Brand Column */}
           <div className="space-y-6">
             <div className="flex flex-col gap-1">
               <span className="text-2xl font-black tracking-tighter font-headline text-white">
-                PCNU<span className="text-[#016E45]">Bolsel</span>
+                PCNU<span className="text-primary-fixed-dim">Bolsel</span>
               </span>
               <div className="h-1 w-12 bg-[#016E45] rounded-full" />
             </div>
-            <p className="text-[#fcf8fa]/60 text-sm leading-relaxed max-w-xs font-body">
+            <p className="text-[#fcf8fa]/75 text-base leading-relaxed max-w-xs font-body">
               Portal berita dan informasi resmi Pengurus Cabang Nahdlatul Ulama Kabupaten Bolaang Mongondow Selatan. Menyebarkan kedamaian dan Islam yang Rahmatan lil Alamin.
             </p>
             <div className="flex gap-4 pt-2">
@@ -37,7 +36,7 @@ export const Footer = () => {
                 <a
                   key={social.name}
                   href={social.href}
-                  className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#fcf8fa]/70 hover:bg-[#016E45] hover:text-white hover:border-[#016E45] hover:-translate-y-1 transition-all duration-300"
+                  className="size-11 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#fcf8fa]/70 hover:bg-[#016E45] hover:text-white hover:border-[#016E45] hover:-translate-y-1 transition-all duration-300"
                   aria-label={social.name}
                 >
                   {social.icon}
@@ -51,25 +50,25 @@ export const Footer = () => {
             <h3 className="text-white font-headline font-bold text-lg tracking-tight">Tautan Cepat</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/" className="text-[#fcf8fa]/50 hover:text-[#016E45] transition-colors text-sm font-medium flex items-center group">
+                <Link href="/" className="text-[#fcf8fa]/75 hover:text-primary-fixed-dim transition-colors min-h-11 text-base font-medium flex items-center group">
                   <span className="w-1.5 h-1.5 bg-[#016E45]/30 rounded-full mr-2 opacity-0 group-hover:opacity-100 transition-all" />
                   Beranda
                 </Link>
               </li>
               <li>
-                <Link href="/explore" className="text-[#fcf8fa]/50 hover:text-[#016E45] transition-colors text-sm font-medium flex items-center group">
+                <Link href="/explore" className="text-[#fcf8fa]/75 hover:text-primary-fixed-dim transition-colors min-h-11 text-base font-medium flex items-center group">
                   <span className="w-1.5 h-1.5 bg-[#016E45]/30 rounded-full mr-2 opacity-0 group-hover:opacity-100 transition-all" />
                   Jelajah Berita
                 </Link>
               </li>
               <li>
-                <Link href="/tentang" className="text-[#fcf8fa]/50 hover:text-[#016E45] transition-colors text-sm font-medium flex items-center group">
+                <Link href="/tentang-kami" className="text-[#fcf8fa]/75 hover:text-primary-fixed-dim transition-colors min-h-11 text-base font-medium flex items-center group">
                   <span className="w-1.5 h-1.5 bg-[#016E45]/30 rounded-full mr-2 opacity-0 group-hover:opacity-100 transition-all" />
                   Tentang PCNU
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-[#fcf8fa]/50 hover:text-[#016E45] transition-colors text-sm font-medium flex items-center group">
+                <Link href="#" className="text-[#fcf8fa]/75 hover:text-primary-fixed-dim transition-colors min-h-11 text-base font-medium flex items-center group">
                   <span className="w-1.5 h-1.5 bg-[#016E45]/30 rounded-full mr-2 opacity-0 group-hover:opacity-100 transition-all" />
                   Struktur Organisasi
                 </Link>
@@ -82,25 +81,25 @@ export const Footer = () => {
             <h3 className="text-white font-headline font-bold text-lg tracking-tight">Layanan</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/admin/login" className="text-[#fcf8fa]/50 hover:text-[#016E45] transition-colors text-sm font-medium flex items-center group">
+                <Link href="/admin/login" className="text-[#fcf8fa]/75 hover:text-primary-fixed-dim transition-colors min-h-11 text-base font-medium flex items-center group">
                   <span className="w-1.5 h-1.5 bg-[#016E45]/30 rounded-full mr-2 opacity-0 group-hover:opacity-100 transition-all" />
                   Portal Admin
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-[#fcf8fa]/50 hover:text-[#016E45] transition-colors text-sm font-medium flex items-center group">
+                <Link href="#" className="text-[#fcf8fa]/75 hover:text-primary-fixed-dim transition-colors min-h-11 text-base font-medium flex items-center group">
                   <span className="w-1.5 h-1.5 bg-[#016E45]/30 rounded-full mr-2 opacity-0 group-hover:opacity-100 transition-all" />
                   Informasi ZISWAF
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-[#fcf8fa]/50 hover:text-[#016E45] transition-colors text-sm font-medium flex items-center group">
+                <Link href="#" className="text-[#fcf8fa]/75 hover:text-primary-fixed-dim transition-colors min-h-11 text-base font-medium flex items-center group">
                   <span className="w-1.5 h-1.5 bg-[#016E45]/30 rounded-full mr-2 opacity-0 group-hover:opacity-100 transition-all" />
                   Pusat Bantuan
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-[#fcf8fa]/50 hover:text-[#016E45] transition-colors text-sm font-medium flex items-center group">
+                <Link href="#" className="text-[#fcf8fa]/75 hover:text-primary-fixed-dim transition-colors min-h-11 text-base font-medium flex items-center group">
                   <span className="w-1.5 h-1.5 bg-[#016E45]/30 rounded-full mr-2 opacity-0 group-hover:opacity-100 transition-all" />
                   Kebijakan Privasi
                 </Link>
@@ -113,24 +112,24 @@ export const Footer = () => {
             <h3 className="text-white font-headline font-bold text-lg tracking-tight">Kontak Kami</h3>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-white/5 border border-white/5 text-[#016E45]">
+                <div className="shrink-0 p-2 rounded-lg bg-white/5 border border-white/5 text-primary-fixed-dim">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-map-pin"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
                 </div>
-                <p className="text-[#fcf8fa]/50 text-sm leading-relaxed font-body">
+                <p className="text-[#fcf8fa]/75 text-base leading-relaxed font-body">
                   Jl. Trans Sulawesi, Bolaang Mongondow Selatan, Sulawesi Utara.
                 </p>
               </div>
-              <div className="flex items-center gap-3 text-[#fcf8fa]/50 hover:text-[#016E45] transition-colors group cursor-pointer">
-                <div className="p-2 rounded-lg bg-white/5 border border-white/5 text-[#016E45] group-hover:bg-[#016E45] group-hover:text-white transition-all">
+              <div className="flex items-center gap-3 text-[#fcf8fa]/75 hover:text-primary-fixed-dim transition-colors group cursor-pointer">
+                <div className="shrink-0 p-2 rounded-lg bg-white/5 border border-white/5 text-primary-fixed-dim group-hover:bg-[#016E45] group-hover:text-white transition-all">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                 </div>
-                <span className="text-sm font-body">info@pcnubolsel.or.id</span>
+                <span className="min-w-0 break-words text-base font-body">info@pcnubolsel.or.id</span>
               </div>
-              <div className="flex items-center gap-3 text-[#fcf8fa]/50 hover:text-[#016E45] transition-colors group cursor-pointer">
-                <div className="p-2 rounded-lg bg-white/5 border border-white/5 text-[#016E45] group-hover:bg-[#016E45] group-hover:text-white transition-all">
+              <div className="flex items-center gap-3 text-[#fcf8fa]/75 hover:text-primary-fixed-dim transition-colors group cursor-pointer">
+                <div className="shrink-0 p-2 rounded-lg bg-white/5 border border-white/5 text-primary-fixed-dim group-hover:bg-[#016E45] group-hover:text-white transition-all">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-phone"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                 </div>
-                <span className="text-sm font-body">+62 812-3456-7890</span>
+                <span className="min-w-0 break-words text-base font-body">+62 812-3456-7890</span>
               </div>
             </div>
           </div>
@@ -141,9 +140,9 @@ export const Footer = () => {
         <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
           <div className="space-y-1">
             <p className="text-[#fcf8fa]/30 text-[10px] uppercase font-label tracking-[0.2em] font-medium italic">
-              "Merawat Jagat, Membangun Peradaban"
+              &quot;Merawat Jagat, Membangun Peradaban&quot;
             </p>
-            <p className="text-[#fcf8fa]/40 text-xs font-body">
+            <p className="text-[#fcf8fa]/75 text-xs font-body">
               &copy; {currentYear} PCNU Kab. Bolaang Mongondow Selatan. Hak Cipta Dilindungi.
             </p>
           </div>
@@ -152,4 +151,3 @@ export const Footer = () => {
     </footer>
   );
 };
-

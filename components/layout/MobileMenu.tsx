@@ -1,139 +1,78 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { getNavLinks } from './NavLinks';
+import { usePageScrollLock } from '@/lib/ui/scroll-lock';
 
-interface MobileMenuProps {
-  isAdmin?: boolean;
-}
-
-export const MobileMenu = ({ isAdmin }: MobileMenuProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const MobileMenu = ({ isAdmin }: { isAdmin?: boolean }) => {
   const pathname = usePathname();
-  const links = getNavLinks(isAdmin);
-
-  const [mounted, setMounted] = useState(false);
+  const [openPath, setOpenPath] = useState<string | null>(null);
+  const isOpen = openPath === pathname;
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  usePageScrollLock(isOpen);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Close menu when pathname changes
-  useEffect(() => {
-    setIsOpen(false);
-  }, [pathname]);
-
-  // Prevent scrolling when menu is open
-  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
+      element.showModal();
+      element.querySelector<HTMLButtonElement>('button')?.focus();
+    } else if (element.open) element.close();
+    return () => { if (element.open) element.close(); };
   }, [isOpen]);
 
-  const menuContent = (
-    <div
-      className={`fixed inset-0 z-9998 transition-all duration-500 ease-in-out ${isOpen ? 'visible pointer-events-auto' : 'invisible pointer-events-none'
-        }`}
-    >
-      {/* Overlay Backdrop */}
-      <div
-        className={`absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] transition-opacity duration-500 ease-in-out ${isOpen ? 'opacity-100' : 'opacity-0'
-          }`}
-        onClick={() => setIsOpen(false)}
-      />
-
-      {/* Slide-out Menu */}
-      <div
-        className={`absolute top-0 right-0 h-full w-[280px] bg-white shadow-2xl transform transition-transform duration-700 cubic-bezier(0.16, 1, 0.3, 1) ${isOpen ? 'translate-x-0 outline-none' : 'translate-x-full'
-          }`}
-      >
-        <div className="flex flex-col h-full p-8 pt-24 bg-white relative">
-          <button
-            onClick={() => setIsOpen(false)}
-            className="absolute top-6 right-6 grid size-11 place-items-center rounded-xl text-slate-900/30 hover:text-slate-900 transition-colors duration-300"
-            aria-label="Tutup menu"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-          </button>
-
-          <div className="space-y-8 mt-4">
-            {links.map((link, i) => {
-              const isActive = pathname === link.href || (link.href !== '/' && pathname?.startsWith(link.href));
-
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  style={{
-                    transitionDelay: isOpen ? `${150 + i * 80}ms` : '0ms',
-                  }}
-                  className={`flex min-h-11 items-center text-3xl font-headline font-bold tracking-tighter transition-all duration-500 ease-out ${isActive
-                      ? "text-[#016E45] translate-x-2"
-                      : "text-slate-900/70 hover:text-[#016E45] hover:translate-x-1"
-                    } ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-95'}`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </div>
-
-          <div
-            style={{ transitionDelay: isOpen ? '500ms' : '0ms' }}
-            className={`mt-auto pt-10 border-t border-slate-100 space-y-4 transition-all duration-700 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-          >
-            <div>
-              <p className="text-[10px] font-bold text-[#016E45] uppercase tracking-[0.2em] mb-1">
-                Portal Resmi
-              </p>
-              <p className="text-sm font-headline font-semibold text-slate-900">
-                PCNU Bolsel
-              </p>
-            </div>
-            <div className="text-xs text-slate-500 font-medium leading-relaxed">
-              Merawat Jagat,<br />Membangun Peradaban
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const closeOnDesktop = () => { if (desktop.matches) setOpenPath(null); };
+    desktop.addEventListener('change', closeOnDesktop);
+    return () => desktop.removeEventListener('change', closeOnDesktop);
+  }, []);
 
   return (
-    <div className="lg:hidden">
-      {/* Hamburger Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative z-110 grid size-11 place-items-center text-[#0F172A] hover:bg-black/5 rounded-xl transition-all duration-300 active:scale-95 touch-none"
-        aria-label="Toggle menu"
-      >
-        <div className="w-6 h-5 flex flex-col justify-between items-center relative">
-          <span
-            className={`w-full h-0.5 bg-current rounded-full transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? 'rotate-45 translate-y-[9px]' : 'rotate-0 translate-y-0'
-              }`}
-          />
-          <span
-            className={`w-full h-0.5 bg-current rounded-full transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? 'opacity-0 -translate-x-4 scale-x-0' : 'opacity-100 translate-x-0 scale-x-100'
-              }`}
-          />
-          <span
-            className={`w-full h-0.5 bg-current rounded-full transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? '-rotate-45 -translate-y-[9px]' : 'rotate-0 translate-y-0'
-              }`}
-          />
-        </div>
+    <div className="lg:hidden shrink-0">
+      <button ref={trigger} type="button" onClick={() => setOpenPath(isOpen ? null : pathname)} aria-label="Buka menu navigasi" aria-expanded={isOpen} aria-controls={id} aria-haspopup="dialog" className="grid size-11 place-items-center rounded-xl text-primary transition-colors hover:bg-primary/5 active:bg-primary/10">
+        <span aria-hidden="true" className="material-symbols-outlined">menu</span>
       </button>
-
-      {mounted && typeof document !== 'undefined'
-        ? createPortal(menuContent, document.body)
-        : null}
+      <dialog
+        ref={dialog} id={id} aria-label="Menu navigasi" aria-modal="true"
+        onCancel={() => setOpenPath(null)}
+        onClick={(event) => { if (event.target === event.currentTarget) setOpenPath(null); }}
+        onClose={() => {
+          setOpenPath(null);
+          if (trigger.current?.getClientRects().length) trigger.current.focus({ preventScroll: true });
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') { event.preventDefault(); setOpenPath(null); return; }
+          if (event.key !== 'Tab') return;
+          const controls = dialog.current?.querySelectorAll<HTMLElement>('a[href], button');
+          if (!controls?.length) return;
+          const first = controls[0], last = controls[controls.length - 1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }}
+        className="public-ui mobile-navigation m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 text-on-surface backdrop:bg-slate-900/45"
+      >
+        <div data-lenis-prevent className="ml-auto flex h-full w-[min(320px,calc(100vw-24px))] flex-col overflow-y-auto overscroll-contain bg-white px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] shadow-xl">
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <p className="text-sm font-bold text-primary">PCNU Bolsel</p>
+            <button type="button" onClick={() => setOpenPath(null)} className="grid size-11 shrink-0 place-items-center rounded-xl text-on-surface-variant hover:bg-primary/5" aria-label="Tutup menu"><span aria-hidden="true" className="material-symbols-outlined">close</span></button>
+          </div>
+          <nav aria-label="Navigasi mobile" className="space-y-3">
+            {getNavLinks(isAdmin).map((link) => {
+              const active = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+              return <Link key={link.href} href={link.href} aria-current={active ? 'page' : undefined} onClick={() => setOpenPath(null)} className={`flex min-h-14 items-center rounded-xl px-3 py-2 font-headline text-2xl font-bold tracking-tight transition-colors ${active ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-low hover:text-primary'}`}>{link.label}</Link>;
+            })}
+          </nav>
+          <div className="mt-auto border-t border-outline-variant/30 pt-6">
+            <p className="mt-6 text-xs font-bold uppercase tracking-widest text-primary">Portal Resmi</p>
+            <p className="mt-2 text-base leading-relaxed text-on-surface-variant">Merawat Jagat,<br />Membangun Peradaban</p>
+          </div>
+        </div>
+      </dialog>
     </div>
   );
 };

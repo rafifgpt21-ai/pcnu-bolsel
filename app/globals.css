@@ -2,6 +2,7 @@
 @plugin "@tailwindcss/typography";
 
 @theme inline {
+  --color-public-accent: #8a4b08;
   --color-on-primary-container: #002111;
   --color-background: #f9fafb;
   --color-surface-container-high: #e2e2e6;
@@ -55,6 +56,48 @@
   --font-label: var(--font-inter);
   --font-display: var(--font-plus-jakarta-sans);
 }
+
+:root { --site-header-height: 5rem; }
+
+/* Public surfaces only: never restyle the editorial/admin form controls. */
+.public-ui { min-width: 0; }
+.public-ui :where(h1, h2, h3, p, li, figcaption) { overflow-wrap: anywhere; }
+.public-ui :where(a, button, input, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+}
+.public-ui :where(section[id], h2[id], h3[id]) {
+  scroll-margin-top: calc(var(--site-header-height) + 1rem);
+}
+.public-ui :where(button, a, input) { touch-action: manipulation; }
+.public-ui button:disabled { cursor: not-allowed; }
+.public-footer :where(a, button):focus-visible { outline-color: var(--color-primary-fixed-dim); }
+.public-pdf-viewer .react-pdf__Page__canvas { display: block; }
+.public-pdf-viewer .react-pdf__Page__textContent { user-select: none !important; pointer-events: none !important; color: transparent !important; }
+.public-pdf-viewer .react-pdf__Page__textContent span { color: transparent !important; }
+.public-pdf-viewer .pdf-highlight-mark { color: black; background: #ffeb3b; border-radius: 2px; }
+.public-ui .public-reading { line-height: 1.8; }
+.public-ui .public-reading :where(pre, table) { display: block; max-width: 100%; overflow-x: auto; }
+.public-ui .public-reading :where(img, video, iframe) { max-width: 100%; }
+.public-ui .public-reading :where(a, code) { overflow-wrap: anywhere; }
+.public-ui .public-reading :where(blockquote) { color: var(--color-on-surface-variant); }
+.public-ui .public-scroll { scrollbar-width: thin; scrollbar-color: var(--color-outline) transparent; }
+.public-ui .public-scroll::-webkit-scrollbar { display: block; width: 5px; height: 5px; }
+.public-ui .public-scroll::-webkit-scrollbar-thumb { background: var(--color-outline); border-radius: 1rem; }
+html[data-scroll-locked], html[data-scroll-locked] body, html.lenis[data-scroll-locked] body { overflow: hidden !important; }
+.mobile-navigation[open] > div { animation: public-drawer 200ms ease-out; }
+@keyframes public-drawer { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+@media (max-width: 767px) {
+  .public-ui :where(input, select, textarea) { font-size: 1rem; }
+}
+
+@media (min-width: 769px) and (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .public-reveal[data-reveal="pending"] { opacity: 0; }
+  .public-reveal[data-reveal="visible"] { animation: public-reveal var(--reveal-duration, 600ms) ease-out both; animation-delay: var(--reveal-delay, 0ms); }
+  .public-reveal[data-reveal]:focus-within { opacity: 1; animation: none; }
+}
+@keyframes public-reveal { from { opacity: 0; transform: translate(var(--reveal-x, 0), var(--reveal-y, 20px)); } to { opacity: 1; transform: translate(0, 0); } }
 
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
