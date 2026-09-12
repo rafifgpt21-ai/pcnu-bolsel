@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { getYouTubeEmbedUrl, isHttpUrl, isUploadThingUrl, normalizeTags } from "@/lib/posts/domain";
+import { getYouTubeEmbedUrl, isAllowedImageUrl, isHttpUrl, isUploadThingUrl, normalizeTags } from "@/lib/posts/domain";
 import { POST_CATEGORIES, type PostBlock, type PostEditorInput } from "@/lib/posts/types";
 import { sanitizeRichText } from "@/lib/posts/sanitize";
 
@@ -61,7 +61,10 @@ export function parseAndSanitizePostInput(value: unknown): PostEditorInput {
   }));
 
   for (const block of blocks) {
-    if ((block.type === "image" || block.type === "pdf") && block.url && !isUploadThingUrl(block.url)) {
+    if (block.type === "image" && block.url && !isAllowedImageUrl(block.url)) {
+      throw new z.ZodError([{ code: "custom", path: ["blocks", block.id, "url"], message: "URL media tidak valid" }]);
+    }
+    if (block.type === "pdf" && block.url && !isUploadThingUrl(block.url)) {
       throw new z.ZodError([{ code: "custom", path: ["blocks", block.id, "url"], message: "URL media tidak valid" }]);
     }
     if (block.type === "video" && block.url && !getYouTubeEmbedUrl(block.url)) {
@@ -72,7 +75,7 @@ export function parseAndSanitizePostInput(value: unknown): PostEditorInput {
     }
   }
 
-  if (parsed.thumbnail && !isUploadThingUrl(parsed.thumbnail)) throw new Error("URL thumbnail tidak valid");
+  if (parsed.thumbnail && !isAllowedImageUrl(parsed.thumbnail)) throw new Error("URL thumbnail tidak valid");
   if (parsed.sourceUrl && !isHttpUrl(parsed.sourceUrl)) throw new Error("URL sumber tidak valid");
 
   return {

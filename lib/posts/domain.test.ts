@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveExcerpt, generatePostSlug, getYouTubeEmbedUrl, isHttpUrl, isPostLive, isScheduleDue, normalizeTags, readingTimeMinutes, resolvePublicationDate } from "./domain";
+import { deriveExcerpt, generatePostSlug, getYouTubeEmbedUrl, isAllowedImageUrl, isHttpUrl, isPostLive, isScheduleDue, isUploadThingUrl, normalizeTags, readingTimeMinutes, resolvePublicationDate } from "./domain";
 import type { PostBlock } from "./types";
 
 const textBlock = (content: string): PostBlock => ({ id: "1", type: "text", content });
@@ -18,6 +18,17 @@ describe("post domain", () => {
     expect(isHttpUrl("javascript:alert(1)")).toBe(false);
     expect(getYouTubeEmbedUrl("https://youtu.be/abcdefghijk")).toBe("https://www.youtube.com/embed/abcdefghijk");
     expect(getYouTubeEmbedUrl("https://example.com/video")).toBeNull();
+  });
+  it("hanya menerima file dari akun UploadThing situs", () => {
+    expect(isUploadThingUrl("https://vg8cimg109.ufs.sh/f/contoh-file")).toBe(true);
+    expect(isUploadThingUrl("https://akun-lain.ufs.sh/f/contoh-file")).toBe(false);
+    expect(isUploadThingUrl("https://vg8cimg109.ufs.sh/bukan-file/contoh")).toBe(false);
+    expect(isUploadThingUrl("http://vg8cimg109.ufs.sh/f/contoh-file")).toBe(false);
+    expect(isUploadThingUrl("https://vg8cimg109.ufs.sh/f/contoh-file?ubah=1")).toBe(false);
+  });
+  it("menerima hanya gambar fixture lokal yang dikenal", () => {
+    expect(isAllowedImageUrl("/seed/pcnu-mosque.svg")).toBe(true);
+    expect(isAllowedImageUrl("/seed/gambar-asing.svg")).toBe(false);
   });
   it("menentukan jadwal berdasarkan waktu absolut", () => {
     const now = new Date("2026-08-21T10:00:00.000Z");

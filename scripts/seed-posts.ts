@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { PostStatus, PrismaClient } from '../app/generated/prisma/client'
 import { randomUUID } from 'crypto'
+import type { PostBlock } from '../lib/posts/types'
 
 const prisma = new PrismaClient()
 
@@ -24,16 +25,15 @@ function generateRandomTitle(index: number) {
   return `${adjective} ${theme} di Kabupaten Bolsel`
 }
 
-const unsplashImages = [
-  'https://images.unsplash.com/photo-1542869781-a272dcbc0ba4', // Mosque
-  'https://images.unsplash.com/photo-1574345241065-22d7ba4e5ddc', // Abstract geometric
-  'https://images.unsplash.com/photo-1579766948293-2ce16d1ba42c', // Islamic pattern
-  'https://images.unsplash.com/photo-1600865588722-1d5733f37b12', // Culture
+const seedImages = [
+  '/seed/pcnu-mosque.svg',
+  '/seed/pcnu-pattern.svg',
+  '/seed/pcnu-education.svg',
+  '/seed/pcnu-community.svg',
 ]
 
 function getRandomImage() {
-  const base = unsplashImages[Math.floor(Math.random() * unsplashImages.length)]
-  return `${base}?w=1200&auto=format&fit=crop`
+  return seedImages[Math.floor(Math.random() * seedImages.length)]
 }
 
 function slugify(text: string) {
@@ -46,7 +46,7 @@ function slugify(text: string) {
     .replace(/--+/g, '-')
 }
 
-function createTextBlocks(theme: string): any[] {
+function createTextBlocks(theme: string): PostBlock[] {
   return [
     {
       id: randomUUID(),

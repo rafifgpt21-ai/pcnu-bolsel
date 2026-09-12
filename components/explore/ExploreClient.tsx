@@ -197,7 +197,7 @@ export default function ExploreClient({ initialPosts }: ExploreClientProps) {
                             src={post.thumbnail}
                             alt={post.title}
                             className="object-cover transition-transform duration-700 group-hover:scale-105"
-                            sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
+                            sizes="(max-width: 767px) calc(100vw - 32px), (max-width: 1023px) calc(50vw - 36px), 384px"
                             preload={index === 0}
                           />
                         ) : (

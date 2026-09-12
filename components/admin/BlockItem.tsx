@@ -94,7 +94,7 @@ function BlockItemComponent({
             }}
           >
             {block.type === "image" && (preview || block.url) ? (
-              <Image src={preview || block.url || ""} alt={block.altText || block.title || "Pratinjau gambar"} width={1200} height={800} unoptimized={Boolean(preview?.startsWith("blob:"))} className="max-h-[28rem] w-full object-contain" />
+              <Image src={preview || block.url || ""} alt={block.altText || block.title || "Pratinjau gambar"} width={1200} height={800} unoptimized className="max-h-[28rem] w-full object-contain" />
             ) : block.type === "pdf" && (stagedFile || block.url) ? (
               <div className="flex min-h-44 flex-col items-center justify-center gap-2 p-6 text-center">
                 <span className="material-symbols-outlined text-5xl text-secondary" aria-hidden>picture_as_pdf</span>

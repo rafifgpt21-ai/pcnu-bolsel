@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Ilustrasi kebersamaan PCNU Bolsel</title>
+  <desc id="desc">Sekelompok figur membentuk lingkaran kebersamaan.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#01563a"/>
+      <stop offset="1" stop-color="#00a769"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#background)"/>
+  <circle cx="600" cy="338" r="232" fill="none" stroke="#f4c95d" stroke-width="18" stroke-dasharray="24 18"/>
+  <g fill="#fff9e8">
+    <circle cx="600" cy="158" r="55"/><path d="M500 290c17-73 183-73 200 0v76H500z"/>
+    <circle cx="794" cy="306" r="55"/><path d="M686 438c44-61 188-6 179 67l-24 72-190-62z"/>
+    <circle cx="720" cy="514" r="55"/><path d="M608 536c70-35 190 59 160 127l-47 12H563z"/>
+    <circle cx="480" cy="514" r="55"/><path d="M432 663c-30-68 90-162 160-127l45 139H479z"/>
+    <circle cx="406" cy="306" r="55"/><path d="m335 577-24-72c-9-73 135-128 179-67l35 77z"/>
+  </g>
+  <circle cx="600" cy="388" r="92" fill="#f4c95d"/>
+  <path d="M600 323c20 39 68 42 68 84 0 45-34 72-68 88-34-16-68-43-68-88 0-42 48-45 68-84z" fill="#016e45"/>
+</svg>

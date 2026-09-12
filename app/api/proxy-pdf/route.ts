@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { UPLOADTHING_FILE_PATH_PREFIX, UPLOADTHING_HOST } from "@/lib/uploadthing-config";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -11,16 +12,16 @@ export async function GET(request: NextRequest) {
   // SSRF Protection: Validate target URL
   try {
     const parsedUrl = new URL(targetUrl);
-    const allowedDomains = ["utfs.io", "ufs.sh"];
-    const isAllowed = allowedDomains.some(domain => 
-      parsedUrl.hostname === domain || parsedUrl.hostname.endsWith(`.${domain}`)
-    );
+    const isAllowed = parsedUrl.protocol === "https:"
+      && parsedUrl.hostname === UPLOADTHING_HOST
+      && parsedUrl.pathname.startsWith(UPLOADTHING_FILE_PATH_PREFIX)
+      && parsedUrl.search === "";
 
     if (!isAllowed) {
       console.error(`Blocked SSRF attempt to unauthorized domain: ${parsedUrl.hostname}`);
       return new NextResponse("Unauthorized domain", { status: 403 });
     }
-  } catch (e) {
+  } catch {
     return new NextResponse("Invalid URL format", { status: 400 });
   }
 

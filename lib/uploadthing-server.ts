@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { UploadReceipt } from "@/lib/posts/types";
+import { UPLOADTHING_HOST } from "./uploadthing-config";
 import { UTApi } from "uploadthing/server";
 import { z } from "zod";
 
@@ -25,7 +26,7 @@ export function createUploadReceipt(
 export function getFileKeyFromUrl(value: string) {
   try {
     const url = new URL(value);
-    const validHost = url.hostname === "utfs.io" || url.hostname === "ufs.sh" || url.hostname.endsWith(".ufs.sh");
+    const validHost = url.protocol === "https:" && url.hostname === UPLOADTHING_HOST;
     if (!validHost) return null;
     const match = url.pathname.match(/^\/f\/([^/]+)\/?$/);
     return match?.[1] ? decodeURIComponent(match[1]) : null;

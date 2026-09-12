@@ -1,6 +1,7 @@
 import type { PostBlock, PostEditorInput, PostSnapshot, PostStatusValue } from "@/lib/posts/types";
+import { UPLOADTHING_FILE_PATH_PREFIX, UPLOADTHING_HOST } from "../uploadthing-config";
 
-const UPLOADTHING_HOSTS = new Set(["utfs.io", "ufs.sh"]);
+const LOCAL_SEED_IMAGE_PATTERN = /^\/seed\/pcnu-(?:community|education|mosque|pattern)\.svg$/;
 
 export function generatePostSlug(value: string) {
   return value
@@ -68,11 +69,18 @@ export function isHttpUrl(value?: string | null) {
 export function isUploadThingUrl(value?: string | null) {
   if (!value) return false;
   try {
-    const hostname = new URL(value).hostname;
-    return UPLOADTHING_HOSTS.has(hostname) || hostname.endsWith(".ufs.sh");
+    const url = new URL(value);
+    return url.protocol === "https:"
+      && url.hostname === UPLOADTHING_HOST
+      && url.pathname.startsWith(UPLOADTHING_FILE_PATH_PREFIX)
+      && url.search === "";
   } catch {
     return false;
   }
+}
+
+export function isAllowedImageUrl(value?: string | null) {
+  return Boolean(value && (LOCAL_SEED_IMAGE_PATTERN.test(value) || isUploadThingUrl(value)));
 }
 
 export function getYouTubeEmbedUrl(value?: string | null) {

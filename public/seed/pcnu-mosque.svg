@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Ilustrasi masjid PCNU Bolsel</title>
+  <desc id="desc">Siluet masjid hijau dengan bulan sabit di atas langit keemasan.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#f8e7ad"/>
+      <stop offset="1" stop-color="#f2b94b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#sky)"/>
+  <circle cx="930" cy="145" r="64" fill="#fff7d7"/>
+  <circle cx="957" cy="124" r="64" fill="#f5ca69"/>
+  <path d="M0 570c180-70 340-46 510 0s330 62 690-22v127H0z" fill="#034f36"/>
+  <path d="M300 565V345h85v220zm515 0V345h85v220zM560 565V366h80v199z" fill="#016e45"/>
+  <path d="M278 345h129l-65-108zm515 0h129l-65-108z" fill="#016e45"/>
+  <path d="M432 565V392h336v173z" fill="#f7f2dc"/>
+  <path d="M468 392c21-104 243-104 264 0z" fill="#016e45"/>
+  <path d="M570 565V470a30 30 0 0 1 60 0v95z" fill="#034f36"/>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Pola geometris PCNU Bolsel</title>
+  <desc id="desc">Pola bintang Islami berwarna hijau dan emas.</desc>
+  <defs>
+    <pattern id="tiles" width="180" height="180" patternUnits="userSpaceOnUse" patternTransform="rotate(15)">
+      <path d="m90 12 22 52 56 4-43 36 14 55-49-29-49 29 14-55-43-36 56-4z" fill="none" stroke="#f4c95d" stroke-width="10"/>
+      <circle cx="90" cy="90" r="22" fill="#f4c95d"/>
+    </pattern>
+    <linearGradient id="base" x1="0" y1="1" x2="1" y2="0">
+      <stop stop-color="#003d2c"/>
+      <stop offset="1" stop-color="#018653"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#base)"/>
+  <rect width="1200" height="675" fill="url(#tiles)" opacity=".42"/>
+  <circle cx="600" cy="338" r="174" fill="#fff9e8" opacity=".94"/>
+  <path d="M600 205 635 289 726 296 657 355 678 444 600 397 522 444 543 355 474 296 565 289z" fill="#016e45"/>
+</svg>
