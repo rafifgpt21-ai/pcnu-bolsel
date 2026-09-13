@@ -21,6 +21,7 @@ import { uploadFiles } from "@/lib/uploadthing";
 import { BlockItem } from "./BlockItem";
 import { deriveExcerpt } from "@/lib/posts/domain";
 import { editorContentFingerprint, parseLocalDraft, shouldOfferLocalRecovery, shouldSaveEditorDraft } from "@/lib/posts/local-draft";
+import { canPerformPostAction } from "@/lib/posts/policy";
 import {
   POST_CATEGORIES,
   POST_STATUS_LABELS,
@@ -35,7 +36,7 @@ import {
 
 type Props = {
   initialData?: PostEditorData;
-  currentUser: { name: string; role: "ADMIN" | "SUPER_ADMIN" };
+  currentUser: { name: string; role: "EDITOR" | "ADMIN" | "SUPER_ADMIN" };
 };
 
 type Sheet = "metadata" | "seo" | "history" | "actions" | null;
@@ -137,8 +138,12 @@ export function PostEditor({ initialData, currentUser }: Props) {
   const autosaveInFlight = useRef(false);
   const hasEditorInteraction = useRef(false);
 
-  const isSuper = currentUser.role === "SUPER_ADMIN";
-  const locked = !isSuper && (status === "IN_REVIEW" || status === "SCHEDULED" || status === "ARCHIVED");
+  const locked = !canPerformPostAction(currentUser.role, status, "EDIT");
+  const canPublish = canPerformPostAction(currentUser.role, status, "PUBLISH");
+  const canSchedule = canPerformPostAction(currentUser.role, status, "SCHEDULE");
+  const canReturn = canPerformPostAction(currentUser.role, status, "RETURN");
+  const canUnpublish = canPerformPostAction(currentUser.role, status, "UNPUBLISH");
+  const canDelete = canPerformPostAction(currentUser.role, status, "DELETE");
   const live = initialData?.isLive || status === "PUBLISHED";
   const tags = useMemo(() => tagsText.split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 10), [tagsText]);
   const effectiveExcerpt = useMemo(() => excerpt.trim() || deriveExcerpt(blocks), [blocks, excerpt]);
@@ -347,7 +352,7 @@ export function PostEditor({ initialData, currentUser }: Props) {
       <Field label="Ringkasan (opsional)" hint="Jika dikosongkan, ringkasan dibuat otomatis dari blok teks pertama."><textarea className="editor-field" rows={3} maxLength={300} value={excerpt} onChange={(event) => setExcerpt(event.target.value)} disabled={locked} placeholder="Biarkan kosong untuk membuat otomatis dari isi artikel" /><span className="block text-right text-xs text-on-surface-variant">{excerpt.length}/300</span></Field>
       <Field label="Kategori"><select className="editor-field" value={category} onChange={(event) => setCategory(event.target.value as typeof category)} disabled={locked}>{POST_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select></Field>
       <Field label="Tag" hint="Pisahkan dengan koma, maksimal 10 tag."><input className="editor-field" value={tagsText} onChange={(event) => setTagsText(event.target.value)} disabled={locked} placeholder="organisasi, sosial, kegiatan" /></Field>
-      <Field label="Nama penulis"><input className="editor-field" value={authorName} onChange={(event) => setAuthorName(event.target.value)} disabled={locked || !isSuper} /></Field>
+      <Field label="Nama penulis"><input className="editor-field" value={authorName} onChange={(event) => setAuthorName(event.target.value)} disabled={locked || currentUser.role === "ADMIN"} /></Field>
       <Field label="Tanggal publikasi (opsional)" hint="Jika kosong, waktu saat tombol Terbitkan sekarang ditekan akan digunakan."><input className="editor-field" type="datetime-local" value={publishedAt} onChange={(event) => setPublishedAt(event.target.value)} disabled={locked} /></Field>
       <Field label="Thumbnail">
         {thumbnail || previews.thumbnail ? <Image src={previews.thumbnail || thumbnail} alt="Pratinjau thumbnail" width={640} height={360} unoptimized className="aspect-video w-full rounded-xl object-cover" /> : <div className="grid aspect-video place-items-center rounded-xl bg-surface-container text-sm text-on-surface-variant">Belum ada thumbnail</div>}
@@ -392,11 +397,11 @@ export function PostEditor({ initialData, currentUser }: Props) {
         {busy && <span className="material-symbols-outlined animate-spin text-lg text-secondary" aria-label="Memproses">progress_activity</span>}
       </div>
       {!locked && <div className="grid grid-cols-2 gap-2"><button type="button" onClick={save} disabled={busy} className="editor-action bg-surface-container text-primary"><span className="material-symbols-outlined mr-1.5 text-lg">save</span>Draft</button><button type="button" onClick={submit} disabled={busy} className="editor-action bg-primary text-on-primary"><span className="material-symbols-outlined mr-1.5 text-lg">rate_review</span>Review</button></div>}
-      {isSuper && <button type="button" onClick={publish} disabled={busy} className="editor-action bg-secondary text-on-secondary"><span className="material-symbols-outlined mr-2 text-lg">publish</span>Terbitkan sekarang</button>}
-      {isSuper && <details className="group rounded-xl border border-outline-variant/30 bg-surface-container-lowest"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-xs font-bold"><span className="flex items-center gap-2"><span className="material-symbols-outlined text-lg text-secondary">schedule</span>Jadwalkan publikasi</span><span className="material-symbols-outlined text-lg transition group-open:rotate-180">expand_more</span></summary><div className="border-t border-outline-variant/20 p-3"><input aria-label="Jadwal publikasi WIB" type="datetime-local" className="editor-field" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} /><button type="button" onClick={schedule} disabled={busy} className="editor-action mt-2 bg-primary text-on-primary">Simpan jadwal</button></div></details>}
-      {isSuper && status === "IN_REVIEW" && <button type="button" onClick={() => { const note = window.prompt("Catatan revisi untuk editor"); if (note && postId) mutate(() => returnPostToDraft(postId, version, note), "Review dikembalikan menjadi draft."); }} className="editor-action bg-amber-100 text-amber-900">Kembalikan dengan catatan</button>}
-      {isSuper && status === "SCHEDULED" && postId && <button type="button" onClick={() => mutate(() => cancelScheduledPost(postId, version), "Jadwal dibatalkan.")} className="editor-action bg-surface-container text-primary">Batalkan jadwal</button>}
-      {isSuper && postId && <details className="group rounded-xl border border-outline-variant/20"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-xs font-bold text-on-surface-variant"><span>Aksi lainnya</span><span className="material-symbols-outlined text-lg transition group-open:rotate-180">expand_more</span></summary><div className="space-y-2 border-t border-outline-variant/20 p-2">{live && <button type="button" onClick={() => window.confirm("Arsipkan dan lepas artikel dari publik?") && mutate(() => unpublishPost(postId, version), "Artikel diarsipkan.")} className="editor-action bg-error/10 text-error">Unpublish / arsipkan</button>}<button type="button" onClick={() => window.confirm("Hapus post secara permanen? Tindakan ini tidak dapat dibatalkan.") && mutate(async () => { const result = await deletePostPermanently(postId, version); if (result.success) router.push("/admin"); return result; }, "Post dihapus permanen.")} className="editor-action text-error">Hapus permanen</button></div></details>}
+      {canPublish && <button type="button" onClick={publish} disabled={busy} className="editor-action bg-secondary text-on-secondary"><span className="material-symbols-outlined mr-2 text-lg">publish</span>Terbitkan sekarang</button>}
+      {canSchedule && <details className="group rounded-xl border border-outline-variant/30 bg-surface-container-lowest"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-xs font-bold"><span className="flex items-center gap-2"><span className="material-symbols-outlined text-lg text-secondary">schedule</span>Jadwalkan publikasi</span><span className="material-symbols-outlined text-lg transition group-open:rotate-180">expand_more</span></summary><div className="border-t border-outline-variant/20 p-3"><input aria-label="Jadwal publikasi WIB" type="datetime-local" className="editor-field" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} /><button type="button" onClick={schedule} disabled={busy} className="editor-action mt-2 bg-primary text-on-primary">Simpan jadwal</button></div></details>}
+      {canReturn && status === "IN_REVIEW" && <button type="button" onClick={() => { const note = window.prompt("Catatan revisi untuk editor"); if (note && postId) mutate(() => returnPostToDraft(postId, version, note), "Review dikembalikan menjadi draft."); }} className="editor-action bg-amber-100 text-amber-900">Kembalikan dengan catatan</button>}
+      {canSchedule && status === "SCHEDULED" && postId && <button type="button" onClick={() => mutate(() => cancelScheduledPost(postId, version), "Jadwal dibatalkan.")} className="editor-action bg-surface-container text-primary">Batalkan jadwal</button>}
+      {postId && ((canUnpublish && live) || canDelete) && <details className="group rounded-xl border border-outline-variant/20"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-xs font-bold text-on-surface-variant"><span>Aksi lainnya</span><span className="material-symbols-outlined text-lg transition group-open:rotate-180">expand_more</span></summary><div className="space-y-2 border-t border-outline-variant/20 p-2">{canUnpublish && live && <button type="button" onClick={() => window.confirm("Arsipkan dan lepas artikel dari publik?") && mutate(() => unpublishPost(postId, version), "Artikel diarsipkan.")} className="editor-action bg-error/10 text-error">Unpublish / arsipkan</button>}{canDelete && <button type="button" onClick={() => window.confirm("Hapus post secara permanen? Tindakan ini tidak dapat dibatalkan.") && mutate(async () => { const result = await deletePostPermanently(postId, version); if (result.success) router.push("/admin"); return result; }, "Post dihapus permanen.")} className="editor-action text-error">Hapus permanen</button>}</div></details>}
     </div>
   );
 

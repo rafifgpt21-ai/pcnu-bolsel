@@ -8,7 +8,7 @@ export const authConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const role = auth?.user?.role;
-      const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+      const isAdmin = role === 'EDITOR' || role === 'ADMIN' || role === 'SUPER_ADMIN';
       const isSuperAdmin = role === 'SUPER_ADMIN';
       
       const isProtectedPath = nextUrl.pathname.startsWith('/admin') && nextUrl.pathname !== '/admin/login';
@@ -28,14 +28,14 @@ export const authConfig = {
     jwt: async ({ token, user }) => {
       if (user) {
         token.id = user.id
-        token.role = (user as any).role
+        token.role = user.role
       }
       return token
     },
     session: async ({ session, token }) => {
       if (session.user) {
         session.user.id = typeof token.id === "string" ? token.id : token.sub || ""
-        if (token.role) (session.user as any).role = token.role as string
+        if (typeof token.role === "string") session.user.role = token.role
       }
       return session
     },

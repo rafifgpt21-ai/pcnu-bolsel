@@ -40,7 +40,7 @@ import {
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { randomUUID } from "node:crypto";
 
-type EditorActor = { id: string; name: string; role: Extract<Role, "ADMIN" | "SUPER_ADMIN"> };
+type EditorActor = { id: string; name: string; role: Extract<Role, "EDITOR" | "ADMIN" | "SUPER_ADMIN"> };
 
 const REVISION_LIMIT = 20;
 
@@ -51,7 +51,7 @@ function fail<T>(error: string, code: Extract<ActionResult<T>, { success: false 
 async function requireEditor(): Promise<EditorActor | null> {
   const session = await auth();
   const role = session?.user?.role as Role | undefined;
-  if (!session?.user?.id || (role !== Role.ADMIN && role !== Role.SUPER_ADMIN)) return null;
+  if (!session?.user?.id || (role !== Role.EDITOR && role !== Role.ADMIN && role !== Role.SUPER_ADMIN)) return null;
   return {
     id: session.user.id,
     name: session.user.name?.trim() || session.user.email?.trim() || "Redaksi PCNU",
@@ -61,6 +61,10 @@ async function requireEditor(): Promise<EditorActor | null> {
 
 function isSuperAdmin(actor: EditorActor) {
   return actor.role === Role.SUPER_ADMIN;
+}
+
+function canManageWorkflow(actor: EditorActor, action: "RETURN" | "PUBLISH" | "SCHEDULE" | "UNPUBLISH" | "DELETE") {
+  return canPerformPostAction(actor.role, PostStatus.DRAFT, action);
 }
 
 function jsonSnapshot(snapshot: PostSnapshot): Prisma.InputJsonValue {
@@ -440,7 +444,7 @@ export async function submitPostForReview(rawInput: unknown) {
 export async function publishPost(rawInput: unknown) {
   const actor = await requireEditor();
   if (!actor) return fail("Unauthorized", "UNAUTHORIZED");
-  if (!isSuperAdmin(actor)) return fail("Hanya Super Admin dapat menerbitkan post", "FORBIDDEN");
+  if (!canManageWorkflow(actor, "PUBLISH")) return fail("Role Anda tidak dapat menerbitkan post", "FORBIDDEN");
   return saveWorkspace(rawInput, actor, {
     status: PostStatus.PUBLISHED,
     reason: "PUBLISH",
@@ -451,7 +455,7 @@ export async function publishPost(rawInput: unknown) {
 export async function schedulePost(rawInput: unknown, scheduledAt: string) {
   const actor = await requireEditor();
   if (!actor) return fail("Unauthorized", "UNAUTHORIZED");
-  if (!isSuperAdmin(actor)) return fail("Hanya Super Admin dapat menjadwalkan post", "FORBIDDEN");
+  if (!canManageWorkflow(actor, "SCHEDULE")) return fail("Role Anda tidak dapat menjadwalkan post", "FORBIDDEN");
   const scheduleAt = new Date(scheduledAt);
   if (Number.isNaN(scheduleAt.getTime()) || scheduleAt.getTime() <= Date.now() + 60_000) {
     return fail("Jadwal harus lebih dari satu menit dari sekarang", "VALIDATION");
@@ -468,7 +472,7 @@ export async function schedulePost(rawInput: unknown, scheduledAt: string) {
 export async function returnPostToDraft(id: string, expectedVersion: number, note: string): Promise<ActionResult<{ version: number }>> {
   const actor = await requireEditor();
   if (!actor) return fail("Unauthorized", "UNAUTHORIZED");
-  if (!isSuperAdmin(actor)) return fail("Hanya Super Admin dapat mengembalikan review", "FORBIDDEN");
+  if (!canManageWorkflow(actor, "RETURN")) return fail("Role Anda tidak dapat mengembalikan review", "FORBIDDEN");
   if (!note.trim()) return fail("Catatan revisi wajib diisi", "VALIDATION");
   const post = await prisma.post.findUnique({ where: { id } });
   if (!post) return fail("Post tidak ditemukan", "NOT_FOUND");
@@ -496,7 +500,7 @@ export async function returnPostToDraft(id: string, expectedVersion: number, not
 export async function cancelScheduledPost(id: string, expectedVersion: number): Promise<ActionResult<{ version: number; status: PostStatus }>> {
   const actor = await requireEditor();
   if (!actor) return fail("Unauthorized", "UNAUTHORIZED");
-  if (!isSuperAdmin(actor)) return fail("Hanya Super Admin dapat membatalkan jadwal", "FORBIDDEN");
+  if (!canManageWorkflow(actor, "SCHEDULE")) return fail("Role Anda tidak dapat membatalkan jadwal", "FORBIDDEN");
   const post = await prisma.post.findUnique({ where: { id } });
   if (!post) return fail("Post tidak ditemukan", "NOT_FOUND");
   if (post.version !== expectedVersion) return fail("Versi server lebih baru", "CONFLICT");
@@ -519,7 +523,7 @@ export async function cancelScheduledPost(id: string, expectedVersion: number): 
 export async function unpublishPost(id: string, expectedVersion: number): Promise<ActionResult<{ version: number }>> {
   const actor = await requireEditor();
   if (!actor) return fail("Unauthorized", "UNAUTHORIZED");
-  if (!isSuperAdmin(actor)) return fail("Hanya Super Admin dapat mengarsipkan post", "FORBIDDEN");
+  if (!canManageWorkflow(actor, "UNPUBLISH")) return fail("Role Anda tidak dapat mengarsipkan post", "FORBIDDEN");
   const post = await prisma.post.findUnique({ where: { id } });
   if (!post) return fail("Post tidak ditemukan", "NOT_FOUND");
   if (post.version !== expectedVersion) return fail("Versi server lebih baru", "CONFLICT");
@@ -571,7 +575,7 @@ export async function restorePostRevision(postId: string, revisionId: string, ex
 export async function deletePostPermanently(id: string, expectedVersion: number): Promise<ActionResult<undefined>> {
   const actor = await requireEditor();
   if (!actor) return fail("Unauthorized", "UNAUTHORIZED");
-  if (!isSuperAdmin(actor)) return fail("Hanya Super Admin dapat menghapus permanen", "FORBIDDEN");
+  if (!canManageWorkflow(actor, "DELETE")) return fail("Role Anda tidak dapat menghapus permanen", "FORBIDDEN");
   const post = await prisma.post.findUnique({ where: { id }, include: { revisions: { select: { mediaUrls: true } } } });
   if (!post) return fail("Post tidak ditemukan", "NOT_FOUND");
   if (post.version !== expectedVersion) return fail("Versi server lebih baru", "CONFLICT");

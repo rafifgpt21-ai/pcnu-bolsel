@@ -17,7 +17,7 @@ const statusStyle: Record<PostStatusValue, string> = {
 
 const DELETE_HOLD_MS = 3_000;
 
-export function AdminPostList({ initialPosts, currentRole }: { initialPosts: AdminPostListItem[]; currentRole: "ADMIN" | "SUPER_ADMIN" }) {
+export function AdminPostList({ initialPosts, currentRole }: { initialPosts: AdminPostListItem[]; currentRole: "EDITOR" | "ADMIN" | "SUPER_ADMIN" }) {
   const [posts, setPosts] = useState(initialPosts);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"ALL" | PostStatusValue>("ALL");

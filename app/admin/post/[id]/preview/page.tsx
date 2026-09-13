@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Pratinjau post | PCNU Bolsel", robot
 export default async function AdminPostPreview({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session) redirect("/admin/login");
-  if (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") redirect("/");
+  if (session.user.role !== "EDITOR" && session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") redirect("/");
   const { id } = await params;
   const post = await getPostById(id);
   if (!post) notFound();

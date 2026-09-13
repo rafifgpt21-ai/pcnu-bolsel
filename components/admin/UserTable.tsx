@@ -16,6 +16,13 @@ type User = {
   createdAt: Date;
 };
 
+const roleLabel: Record<Role, string> = {
+  USER: 'User',
+  EDITOR: 'Editor',
+  ADMIN: 'Admin',
+  SUPER_ADMIN: 'Super Admin',
+};
+
 export function UserTable({ initialUsers }: { initialUsers: User[] }) {
   const [users, setUsers] = useState(initialUsers);
   const [search, setSearch] = useState('');
@@ -119,7 +126,7 @@ export function UserTable({ initialUsers }: { initialUsers: User[] }) {
                 <div className="lg:hidden mt-1 flex items-center gap-2 text-[10px] text-gray-400">
                   <span>{formatDate(user.createdAt)}</span>
                   <span className="w-1 h-1 rounded-full bg-gray-200"></span>
-                  <span className="uppercase font-bold text-[#0051d5]">Admin</span>
+                  <span className="uppercase font-bold text-[#0051d5]">{roleLabel[user.role]}</span>
                 </div>
               </div>
 
@@ -129,9 +136,9 @@ export function UserTable({ initialUsers }: { initialUsers: User[] }) {
 
               <div className="hidden lg:flex col-span-1 items-center justify-center">
                 <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                  user.role === 'SUPER_ADMIN' ? 'bg-blue-50 text-[#0051d5]' : 'bg-gray-100 text-gray-500'
+                  user.role === 'SUPER_ADMIN' ? 'bg-blue-50 text-[#0051d5]' : user.role === 'EDITOR' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'
                 }`}>
-                  Admin
+                  {roleLabel[user.role]}
                 </span>
               </div>
 

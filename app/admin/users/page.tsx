@@ -25,7 +25,7 @@ export default async function ManageUsersPage() {
               Kelola User
             </h1>
             <p className="text-gray-500 font-medium mt-1">
-              Tambahkan dan kelola pengelola (admin) platform.
+              Tambahkan dan kelola editor maupun admin platform.
             </p>
           </div>
         </div>

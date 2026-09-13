@@ -5,7 +5,7 @@ import { MobileMenu } from './MobileMenu';
 
 export const Header = async () => {
   const session = await auth();
-  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+  const isAdmin = session?.user?.role === "EDITOR" || session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
 
   return (
@@ -28,7 +28,7 @@ export const Header = async () => {
                 <span className="max-w-32 truncate capitalize hidden sm:inline">{session.user?.name || "User"}</span>
                 {session.user?.role && (
                   <span className="text-xs bg-[#016E45] text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    {session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN" ? "Admin" : session.user.role}
+                    {session.user.role === "EDITOR" ? "Editor" : session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN" ? "Admin" : session.user.role}
                   </span>
                 )}
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down w-4 h-4 transition-transform group-open:rotate-180"><path d="m6 9 6 6 6-6"/></svg>

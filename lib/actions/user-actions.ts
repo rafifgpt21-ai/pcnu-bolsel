@@ -6,6 +6,12 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { Role } from "@/app/generated/prisma/client";
 
+const MANAGED_ROLES: Role[] = [Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN];
+
+function parseManagedRole(value: FormDataEntryValue | null): Role | null {
+  return typeof value === "string" && MANAGED_ROLES.includes(value as Role) ? value as Role : null;
+}
+
 async function isSuperAdmin() {
   const session = await auth();
   return session?.user?.role === "SUPER_ADMIN";
@@ -19,7 +25,7 @@ export async function getUsers() {
   return await prisma.user.findMany({
     where: {
       role: {
-        in: ["ADMIN", "SUPER_ADMIN"],
+        in: MANAGED_ROLES,
       },
     },
     orderBy: {
@@ -45,7 +51,7 @@ export async function createUser(formData: FormData) {
   const username = formData.get("username") as string;
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const role = formData.get("role") as Role;
+  const role = parseManagedRole(formData.get("role"));
 
   if (!username || !password || !role) {
     return { error: "Username, password, and role are required" };
@@ -90,18 +96,19 @@ export async function updateUser(id: string, formData: FormData) {
   const username = formData.get("username") as string;
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const role = formData.get("role") as Role;
+  const role = parseManagedRole(formData.get("role"));
 
-  const data: any = {
+  if (!username || !role) {
+    return { error: "Username and a valid role are required" };
+  }
+
+  const data = {
     name,
     username,
     email: email || undefined,
     role,
+    ...(password?.trim() ? { password: await bcrypt.hash(password, 10) } : {}),
   };
-
-  if (password && password.trim() !== "") {
-    data.password = await bcrypt.hash(password, 10);
-  }
 
   try {
     await prisma.user.update({

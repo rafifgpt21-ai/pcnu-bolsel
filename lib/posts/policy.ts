@@ -1,10 +1,11 @@
 import type { PostStatusValue } from "./types";
 
-export type EditorialRole = "ADMIN" | "SUPER_ADMIN";
+export type EditorialRole = "EDITOR" | "ADMIN" | "SUPER_ADMIN";
 export type EditorialAction = "EDIT" | "AUTOSAVE" | "SAVE" | "SUBMIT" | "RETURN" | "PUBLISH" | "SCHEDULE" | "UNPUBLISH" | "DELETE" | "RESTORE";
 
 export function canPerformPostAction(role: EditorialRole, status: PostStatusValue, action: EditorialAction) {
   if (role === "SUPER_ADMIN") return true;
+  if (role === "EDITOR") return action !== "DELETE";
   if (["RETURN", "PUBLISH", "SCHEDULE", "UNPUBLISH", "DELETE"].includes(action)) return false;
   if (["IN_REVIEW", "SCHEDULED", "ARCHIVED"].includes(status)) return false;
   return true;

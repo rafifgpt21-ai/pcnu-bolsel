@@ -6,6 +6,10 @@ describe("editorial policy", () => {
     expect(canPerformPostAction("ADMIN", "DRAFT", "SUBMIT")).toBe(true);
     expect(canPerformPostAction("ADMIN", "IN_REVIEW", "EDIT")).toBe(false);
     expect(canPerformPostAction("ADMIN", "DRAFT", "PUBLISH")).toBe(false);
+    expect(canPerformPostAction("EDITOR", "DRAFT", "PUBLISH")).toBe(true);
+    expect(canPerformPostAction("EDITOR", "PUBLISHED", "EDIT")).toBe(true);
+    expect(canPerformPostAction("EDITOR", "ARCHIVED", "RESTORE")).toBe(true);
+    expect(canPerformPostAction("EDITOR", "DRAFT", "DELETE")).toBe(false);
     expect(canPerformPostAction("SUPER_ADMIN", "IN_REVIEW", "RETURN")).toBe(true);
     expect(canPerformPostAction("SUPER_ADMIN", "ARCHIVED", "RESTORE")).toBe(true);
   });

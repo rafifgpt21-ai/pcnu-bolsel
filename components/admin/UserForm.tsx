@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/Button';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { createUser, updateUser } from '@/lib/actions/user-actions';
 import { Role } from "@/app/generated/prisma/client";
 
@@ -135,6 +135,7 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
               defaultValue={user?.role || 'ADMIN'}
               className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-[#0051d5] transition-all appearance-none"
             >
+              <option value="EDITOR">Editor</option>
               <option value="ADMIN">Admin</option>
               <option value="SUPER_ADMIN">Admin (Super)</option>
             </select>

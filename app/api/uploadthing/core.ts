@@ -9,7 +9,7 @@ const f = createUploadthing();
 const checkAuth = async () => {
   const session = await auth();
   const role = session?.user?.role;
-  if (!session || (role !== "ADMIN" && role !== "SUPER_ADMIN")) return null;
+  if (!session || (role !== "EDITOR" && role !== "ADMIN" && role !== "SUPER_ADMIN")) return null;
   return session.user;
 };
 
