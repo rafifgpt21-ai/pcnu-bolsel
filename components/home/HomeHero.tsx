@@ -1,12 +1,14 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import HeroSearch from '@/components/HeroSearch';
+import pcnuBolselLogo from '@/public/brand/pcnu-bolsel-logo.png';
 
 export default function HomeHero() {
   return (
     <section 
-      className="relative min-h-[calc(100svh-var(--site-header-height))] md:min-h-[90vh] flex flex-col items-center justify-center px-4 sm:px-8 md:px-12 text-center overflow-hidden py-10 md:pt-20 md:pb-10 animate-in fade-in duration-1000"
+      className="relative min-h-[calc(100svh-var(--site-header-height))] md:min-h-[90vh] flex flex-col items-center justify-center overflow-hidden px-4 py-8 text-center sm:px-8 sm:py-10 md:px-12 md:py-14 lg:py-16 animate-in fade-in duration-1000"
     >
       {/* Dynamic Background Elements */}
       <div className="absolute inset-0 -z-10 bg-surface overflow-hidden">
@@ -17,8 +19,20 @@ export default function HomeHero() {
         <div className="hidden md:block absolute top-[20%] -right-[10%] w-[60vw] h-[60vw] max-w-[700px] max-h-[700px] bg-primary/20 blur-[120px] rounded-full mix-blend-multiply opacity-30 animate-[pulse_20s_ease-in-out_infinite]"></div>
       </div>
 
+      {/* Primary brand identity */}
+      <div className="relative z-10 mb-5 w-full max-w-[680px] sm:mb-6 md:mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both">
+        <div aria-hidden="true" className="absolute inset-x-[8%] inset-y-[12%] -z-10 rounded-full bg-surface/80 blur-3xl"></div>
+        <Image
+          src={pcnuBolselLogo}
+          alt="Logo PCNU Bolaang Mongondow Selatan"
+          preload
+          sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) 620px, 680px"
+          className="relative h-auto w-full select-none object-contain drop-shadow-[0_10px_26px_rgba(1,110,69,0.10)]"
+        />
+      </div>
+
       {/* Impact Chips (Floating Glass) */}
-      <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-6 md:mb-10 w-full max-w-4xl mx-auto z-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 fill-mode-both">
+      <div className="z-10 mx-auto mb-5 flex w-full max-w-4xl flex-wrap justify-center gap-2 sm:mb-6 sm:gap-4 md:mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 fill-mode-both">
         {[
           { icon: 'account_balance', text: '7 MWC' },
           { icon: 'location_city', text: '81 Ranting' },
@@ -35,16 +49,16 @@ export default function HomeHero() {
       </div>
 
       {/* Main Typography */}
-      <div className="relative mb-8 md:mb-12 max-w-5xl z-10 group animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-both">
-        <h1 className="font-headline font-black text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[5.5rem] tracking-tight text-on-surface leading-[1.1] sm:leading-[1.05]">
-          <span className="block mb-2">Portal Resmi,</span>
-          <span className="relative inline-block mt-1 sm:mt-2">
+      <div className="group relative z-10 mb-6 max-w-5xl sm:mb-8 md:mb-10 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-both">
+        <h1 className="font-headline text-3xl font-black leading-[1.08] tracking-tight text-on-surface sm:text-4xl md:text-5xl lg:text-6xl">
+          <span className="mb-1 block sm:mb-2">Portal Resmi,</span>
+          <span className="relative mt-1 inline-block sm:mt-2">
             <span className="relative z-10 text-transparent bg-clip-text bg-linear-to-r from-primary via-public-accent to-primary" style={{ backgroundSize: '200% auto', animation: 'gradient 8s linear infinite' }}>
               Nahdlatul Ulama
             </span>
           </span>
           <br className="hidden sm:block" />
-          <span className="block text-2xl sm:text-4xl md:text-5xl lg:text-[2.75rem] mt-3 sm:mt-5 font-bold tracking-tight text-on-surface/80">
+          <span className="mt-2 block text-xl font-bold tracking-tight text-on-surface/75 sm:mt-3 sm:text-2xl md:text-3xl lg:text-4xl">
             Bolaang Mongondow Selatan
           </span>
         </h1>
@@ -56,7 +70,7 @@ export default function HomeHero() {
       </div>
 
       {/* Primary CTA Scroll Down */}
-      <div className="mt-8 md:mt-16 z-20 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500 fill-mode-both">
+      <div className="z-20 mt-7 md:mt-10 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500 fill-mode-both">
         <Link href="#arsip" scroll={true} className="group flex flex-col items-center gap-4 font-headline font-bold text-lg tracking-tight text-primary hover:text-public-accent transition-all duration-500">
           <span className="opacity-90 text-xs sm:text-xs tracking-[0.3em] font-label mb-1 group-hover:opacity-100 transition-opacity uppercase drop-shadow-sm">Jelajah Bersama</span>
           <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-surface/80 border border-primary/20 flex items-center justify-center shadow-lg shadow-primary/10 md:backdrop-blur-md group-hover:-translate-y-1 transition-all">
