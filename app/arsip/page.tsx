@@ -1,3 +1,11 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Arsip",
+  description: "Halaman arsip PCNU Bolaang Mongondow Selatan sedang dalam pengembangan.",
+  robots: { index: false, follow: true },
+};
+
 export default function ArsipPlaceholder() {
   return (
     <div className="public-ui min-h-[60svh] flex flex-col items-center justify-center px-4 py-12 sm:p-8">

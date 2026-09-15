@@ -370,7 +370,7 @@ export function PostEditor({ initialData, currentUser }: Props) {
         <p className="mt-1 text-on-surface-variant">Judul pencarian memakai Judul Artikel. Deskripsi memakai Ringkasan, atau otomatis mengambil isi blok teks pertama jika Ringkasan kosong.</p>
       </div>
       <div className="overflow-hidden rounded-2xl border border-outline-variant/30 bg-white p-4 text-slate-800">
-        <p className="truncate text-xs text-emerald-700">pcnubolsel.or.id › post › {slug || "judul-artikel"}</p>
+        <p className="truncate text-xs text-emerald-700">pcnubolsel.id › post › {slug || "judul-artikel"}</p>
         <h3 className="mt-1 line-clamp-2 text-lg text-blue-700">{title || "Judul artikel"}</h3>
         <p className="mt-1 line-clamp-3 text-sm text-slate-600">{effectiveExcerpt || "Tambahkan blok teks untuk membuat ringkasan otomatis."}</p>
       </div>

@@ -11,9 +11,12 @@ export default function LoginForm() {
   // Trigger shake animation on error
   useEffect(() => {
     if (state?.success === false) {
-      setShake(true);
-      const timer = setTimeout(() => setShake(false), 500);
-      return () => clearTimeout(timer);
+      const startTimer = window.setTimeout(() => setShake(true), 0);
+      const stopTimer = window.setTimeout(() => setShake(false), 500);
+      return () => {
+        window.clearTimeout(startTimer);
+        window.clearTimeout(stopTimer);
+      };
     }
   }, [state]);
 

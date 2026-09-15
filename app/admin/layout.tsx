@@ -1,5 +1,9 @@
-import { auth } from "@/auth";
-import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Portal Admin",
+  robots: { index: false, follow: false, noarchive: true },
+};
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Not explicitly requiring session here since pages handle redirects, 

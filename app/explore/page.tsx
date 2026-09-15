@@ -1,12 +1,45 @@
 import { getPosts } from "@/lib/actions/post";
 import ExploreClient from "@/components/explore/ExploreClient";
 import ExploreSkeleton from "@/components/explore/ExploreSkeleton";
+import type { Metadata } from "next";
 import { Suspense } from "react";
+import { absoluteUrl, SITE_NAME } from "@/lib/site";
 
-export const metadata = {
-  title: "Jelajah Artikel & Berita | PCNU Bolsel",
-  description: "Telusuri kumpulan berita terbaru, opini mendalam, dan hasil riset strategis dari PCNU Bolaang Mongondow Selatan.",
-};
+const exploreTitle = "Berita NU Bolsel Terkini";
+const exploreDescription =
+  "Jelajahi berita terbaru, kegiatan organisasi, pengumuman, dan wawasan Islam dari PCNU Bolaang Mongondow Selatan.";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; category?: string }>;
+}): Promise<Metadata> {
+  const { search, category } = await searchParams;
+  const isFiltered = Boolean(search?.trim() || (category && category !== "Semua"));
+  const canonical = absoluteUrl("/explore");
+
+  return {
+    title: exploreTitle,
+    description: exploreDescription,
+    alternates: { canonical },
+    robots: isFiltered ? { index: false, follow: true } : undefined,
+    openGraph: {
+      type: "website",
+      locale: "id_ID",
+      siteName: SITE_NAME,
+      url: canonical,
+      title: `${exploreTitle} | ${SITE_NAME}`,
+      description: exploreDescription,
+      images: [absoluteUrl("/opengraph-image")],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${exploreTitle} | ${SITE_NAME}`,
+      description: exploreDescription,
+      images: [absoluteUrl("/opengraph-image")],
+    },
+  };
+}
 
 export default async function KaryaPage({
   searchParams,

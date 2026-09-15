@@ -4,7 +4,13 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { LenisProvider } from "@/components/providers/LenisProvider";
-import { SITE_URL } from "@/lib/site";
+import {
+  absoluteUrl,
+  ORGANIZATION_NAME,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/site";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -18,8 +24,36 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "PCNU Bolsel - Portal Berita Resmi",
-  description: "Portal Berita Resmi Nahdlatul Ulama Bolaang Mongondow Selatan",
+  title: {
+    default: "PCNU Bolaang Mongondow Selatan | Portal Resmi",
+    template: "%s | PCNU Bolsel",
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  creator: ORGANIZATION_NAME,
+  publisher: ORGANIZATION_NAME,
+  openGraph: {
+    type: "website",
+    locale: "id_ID",
+    siteName: SITE_NAME,
+    url: SITE_URL,
+    title: "PCNU Bolaang Mongondow Selatan | Portal Resmi",
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: absoluteUrl("/opengraph-image"),
+        width: 1200,
+        height: 630,
+        alt: "PCNU Bolaang Mongondow Selatan",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PCNU Bolaang Mongondow Selatan | Portal Resmi",
+    description: SITE_DESCRIPTION,
+    images: [absoluteUrl("/opengraph-image")],
+  },
 };
 
 export default function RootLayout({

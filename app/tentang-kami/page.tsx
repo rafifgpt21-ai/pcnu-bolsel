@@ -1,15 +1,60 @@
 import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { serializeJsonLd } from '@/lib/seo';
+import {
+  absoluteUrl,
+  ORGANIZATION_ID,
+  ORGANIZATION_NAME,
+  SITE_NAME,
+  SITE_URL,
+} from '@/lib/site';
 
 const ScrollReveal = dynamic(() => import('@/components/home/ScrollReveal'), {
   ssr: true,
 });
 
 export const metadata: Metadata = {
-  title: 'Tentang Kami - PCNU Bolaang Mongondow Selatan',
+  title: 'Tentang Kami',
   description:
     'Profil dan susunan pengurus Pengurus Cabang Nahdlatul Ulama (PCNU) Kabupaten Bolaang Mongondow Selatan masa khidmat 2025-2030 berdasarkan SK PBNU No. 3460/PB.01/A.II.01.45/99/01/2025.',
+  alternates: { canonical: absoluteUrl('/tentang-kami') },
+  openGraph: {
+    type: 'website',
+    locale: 'id_ID',
+    siteName: SITE_NAME,
+    url: absoluteUrl('/tentang-kami'),
+    title: 'Tentang Kami | PCNU Bolsel',
+    description:
+      'Profil resmi dan susunan pengurus PCNU Kabupaten Bolaang Mongondow Selatan masa khidmat 2025-2030.',
+    images: [absoluteUrl('/opengraph-image')],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Tentang Kami | PCNU Bolsel',
+    description:
+      'Profil resmi dan susunan pengurus PCNU Kabupaten Bolaang Mongondow Selatan masa khidmat 2025-2030.',
+    images: [absoluteUrl('/opengraph-image')],
+  },
+};
+
+const aboutJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'AboutPage',
+  '@id': `${absoluteUrl('/tentang-kami')}#webpage`,
+  url: absoluteUrl('/tentang-kami'),
+  name: 'Tentang Kami | PCNU Bolsel',
+  description:
+    'Profil resmi dan susunan pengurus PCNU Kabupaten Bolaang Mongondow Selatan masa khidmat 2025-2030.',
+  inLanguage: 'id-ID',
+  isPartOf: { '@id': `${SITE_URL}/#website` },
+  about: {
+    '@type': 'Organization',
+    '@id': ORGANIZATION_ID,
+    name: ORGANIZATION_NAME,
+    alternateName: SITE_NAME,
+    url: SITE_URL,
+  },
 };
 
 // ─── Data Pengurus ─────────────────────────────────────────────────────────────
@@ -202,6 +247,10 @@ function JabatanRow({ item }: { item: { jabatan: string; nama: string }; index?:
 export default function TentangKamiPage() {
   return (
     <div className="public-ui">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(aboutJsonLd) }}
+      />
       {/* ── Hero ── */}
       <section className="relative py-10 md:py-0 min-h-[55svh] md:min-h-[65vh] flex flex-col items-center justify-center px-4 sm:px-8 md:px-12 text-center overflow-hidden">
         {/* Background */}

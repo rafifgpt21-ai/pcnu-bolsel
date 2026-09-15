@@ -30,6 +30,39 @@ const nextConfig: NextConfig = {
     },
   },
   allowedDevOrigins: process.env.NODE_ENV === "development" ? [hostOnly] : [],
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.pcnubolsel.id" }],
+        destination: "https://pcnubolsel.id/:path*",
+        permanent: true,
+      },
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "pcnu-bolsel.vercel.app" }],
+        destination: "https://pcnubolsel.id/:path*",
+        permanent: true,
+      },
+    ];
+  },
+  async headers() {
+    const noIndexHeaders = [
+      { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+    ];
+
+    return [
+      { source: "/admin/:path*", headers: noIndexHeaders },
+      { source: "/api/:path*", headers: noIndexHeaders },
+      { source: "/pdf-viewer", headers: noIndexHeaders },
+      {
+        source: "/arsip",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, follow, noarchive" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

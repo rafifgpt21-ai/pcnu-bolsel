@@ -1,8 +1,19 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import NewsCard from '@/components/home/NewsCard';
 import dynamic from 'next/dynamic';
 import { getPosts } from '@/lib/actions/post';
 import HomeHero from '@/components/home/HomeHero';
+import { serializeJsonLd } from '@/lib/seo';
+import {
+  absoluteUrl,
+  ORGANIZATION_ID,
+  ORGANIZATION_NAME,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_URL,
+  WEBSITE_ID,
+} from '@/lib/site';
 
 // Dynamically import components that are below the fold
 
@@ -11,12 +22,64 @@ const ScrollReveal = dynamic(() => import('@/components/home/ScrollReveal'), {
   ssr: true,
 });
 
+export const metadata: Metadata = {
+  title: { absolute: 'PCNU Bolaang Mongondow Selatan | Portal Resmi' },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: SITE_URL },
+  openGraph: {
+    type: 'website',
+    locale: 'id_ID',
+    siteName: SITE_NAME,
+    url: SITE_URL,
+    title: 'PCNU Bolaang Mongondow Selatan | Portal Resmi',
+    description: SITE_DESCRIPTION,
+    images: [absoluteUrl('/opengraph-image')],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PCNU Bolaang Mongondow Selatan | Portal Resmi',
+    description: SITE_DESCRIPTION,
+    images: [absoluteUrl('/opengraph-image')],
+  },
+};
+
+const homeJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': ORGANIZATION_ID,
+      name: ORGANIZATION_NAME,
+      alternateName: SITE_NAME,
+      url: SITE_URL,
+      logo: {
+        '@type': 'ImageObject',
+        url: absoluteUrl('/brand/pcnu-bolsel-favicon.png'),
+      },
+    },
+    {
+      '@type': 'WebSite',
+      '@id': WEBSITE_ID,
+      url: SITE_URL,
+      name: SITE_NAME,
+      alternateName: ORGANIZATION_NAME,
+      description: SITE_DESCRIPTION,
+      inLanguage: 'id-ID',
+      publisher: { '@id': ORGANIZATION_ID },
+    },
+  ],
+};
+
 export default async function Home() {
   const allPosts = await getPosts({ status: 'Published' });
   const latestPosts = allPosts.slice(0, 4);
 
   return (
     <div className="public-ui">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(homeJsonLd) }}
+      />
       {/* Hero Section */}
       <HomeHero />
 

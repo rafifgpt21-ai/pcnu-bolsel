@@ -1,7 +1,13 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getPostByFileUrl } from "@/lib/actions/post";
 import PDFViewerClient from "@/components/pdf/PDFViewerClient";
+
+export const metadata: Metadata = {
+  title: "Penampil Dokumen",
+  robots: { index: false, follow: false, noarchive: true },
+};
 
 export default async function PDFViewerPage({
   searchParams,
