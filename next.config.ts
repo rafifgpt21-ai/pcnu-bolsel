@@ -8,6 +8,9 @@ const uploadThingHost = "vg8cimg109.ufs.sh";
 const nextConfig: NextConfig = {
   /* config options here */
   images: {
+    // Uploaded images are compressed to WebP before storage. Serve them directly
+    // so page views do not create billable Vercel Image Transformations.
+    unoptimized: true,
     minimumCacheTTL: 2_678_400,
     formats: ["image/webp"],
     qualities: [75],

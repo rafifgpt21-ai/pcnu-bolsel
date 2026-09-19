@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import HeroSearch from '@/components/HeroSearch';
-import pcnuBolselLogo from '@/public/brand/pcnu-bolsel-logo.png';
+import pcnuBolselLogo from '@/public/brand/pcnu-bolsel-logo.webp';
 
 export default function HomeHero() {
   return (
