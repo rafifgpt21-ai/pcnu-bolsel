@@ -3,7 +3,6 @@
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
-import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useEffect, useState } from "react";
 
@@ -17,9 +16,8 @@ export function TiptapEditor({ content, onChange, readOnly = false }: Props) {
   const [isFocused, setIsFocused] = useState(false);
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({ link: false }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Link.configure({ openOnClick: false, autolink: true, defaultProtocol: "https" }),
       Placeholder.configure({ placeholder: "Mulai tulis isi post…" }),
     ],
     content,
@@ -30,7 +28,7 @@ export function TiptapEditor({ content, onChange, readOnly = false }: Props) {
     onBlur: () => window.setTimeout(() => setIsFocused(false), 120),
     editorProps: {
       attributes: {
-        class: "tiptap-editor prose prose-slate max-w-none min-h-48 p-4 sm:p-5 font-body text-base leading-relaxed text-primary focus:outline-none prose-headings:text-primary prose-a:text-secondary prose-blockquote:text-on-surface-variant",
+        class: "tiptap-editor prose prose-slate max-w-none min-h-48 p-4 sm:p-5 font-body text-base leading-relaxed text-primary focus:outline-none prose-headings:text-primary prose-blockquote:text-on-surface-variant",
       },
     },
   });
@@ -46,14 +44,6 @@ export function TiptapEditor({ content, onChange, readOnly = false }: Props) {
 
   if (!editor) return <div className="h-48 animate-pulse rounded-xl bg-surface-container-low" />;
 
-  const setLink = () => {
-    const previous = editor.getAttributes("link").href as string | undefined;
-    const href = window.prompt("URL tautan", previous || "https://");
-    if (href === null) return;
-    if (!href.trim()) editor.chain().focus().extendMarkRange("link").unsetLink().run();
-    else editor.chain().focus().extendMarkRange("link").setLink({ href: href.trim() }).run();
-  };
-
   const toolbar: Array<{ icon: string; label: string; active: boolean; action: () => unknown; disabled?: boolean }> = [
     { icon: "undo", label: "Urungkan", active: false, action: () => editor.chain().focus().undo().run(), disabled: !editor.can().undo() },
     { icon: "redo", label: "Ulangi", active: false, action: () => editor.chain().focus().redo().run(), disabled: !editor.can().redo() },
@@ -63,7 +53,6 @@ export function TiptapEditor({ content, onChange, readOnly = false }: Props) {
     { icon: "format_list_bulleted", label: "Daftar simbol", active: editor.isActive("bulletList"), action: () => editor.chain().focus().toggleBulletList().run() },
     { icon: "format_list_numbered", label: "Daftar angka", active: editor.isActive("orderedList"), action: () => editor.chain().focus().toggleOrderedList().run() },
     { icon: "format_quote", label: "Kutipan", active: editor.isActive("blockquote"), action: () => editor.chain().focus().toggleBlockquote().run() },
-    { icon: "link", label: "Tautan", active: editor.isActive("link"), action: setLink },
     { icon: "format_align_left", label: "Rata kiri", active: editor.isActive({ textAlign: "left" }), action: () => editor.chain().focus().setTextAlign("left").run() },
     { icon: "format_align_center", label: "Rata tengah", active: editor.isActive({ textAlign: "center" }), action: () => editor.chain().focus().setTextAlign("center").run() },
     { icon: "format_align_justify", label: "Rata kiri kanan", active: editor.isActive({ textAlign: "justify" }), action: () => editor.chain().focus().setTextAlign("justify").run() },
