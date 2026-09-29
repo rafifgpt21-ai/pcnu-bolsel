@@ -97,6 +97,10 @@ function Field({ label, children, hint }: { label: string; children: React.React
   return <label className="block space-y-1.5"><span className="text-xs font-bold uppercase tracking-[0.12em] text-on-surface-variant">{label}</span>{children}{hint && <span className="block text-xs text-on-surface-variant/70">{hint}</span>}</label>;
 }
 
+function stripInlineLinkMarkup(content: string) {
+  return content.replace(/<\/?a\b[^>]*>/gi, "");
+}
+
 export function PostEditor({ initialData, currentUser }: Props) {
   const router = useRouter();
   const [postId, setPostId] = useState(initialData?.id);
@@ -250,7 +254,7 @@ export function PostEditor({ initialData, currentUser }: Props) {
     setTitle(data.title); setSlug(data.slug || ""); setExcerpt(data.excerpt || ""); setCategory(data.category);
     setTagsText(data.tags.join(", ")); setThumbnail(data.thumbnail || ""); setAuthorName(data.authorName);
     setSourceTitle(data.sourceTitle || ""); setSourceUrl(data.sourceUrl || "");
-    setPublishedAt(dateTimeLocal(data.publishedAt)); setBlocks(data.blocks); setRecovery(null);
+    setPublishedAt(dateTimeLocal(data.publishedAt)); setBlocks(data.blocks.map((block) => block.type === "text" ? { ...block, content: stripInlineLinkMarkup(block.content) } : block)); setRecovery(null);
     setMessage("Draft lokal dipulihkan. Periksa isinya sebelum menyimpan.");
   };
 

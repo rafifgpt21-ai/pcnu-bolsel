@@ -43,7 +43,7 @@ export default function PostClient({ post, relatedPosts }: { post: PublicPost; r
           <Link href="/explore" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-surface-container-lowest/90 px-4 text-xs font-bold uppercase tracking-wider"><span aria-hidden="true" className="material-symbols-outlined text-lg">arrow_back</span>Semua artikel</Link>
           <div className="mt-6 flex flex-wrap gap-2"><span className="rounded-full bg-secondary px-4 py-2 text-xs font-bold uppercase tracking-widest text-on-secondary-container">{post.category}</span>{post.tags.map((tag) => <span key={tag} className="max-w-full break-words [overflow-wrap:anywhere] rounded-full bg-surface-container-lowest/95 px-3 py-2 text-xs font-bold text-primary">#{tag}</span>)}</div>
           <h1 className="mt-5 max-w-4xl break-words text-3xl font-black leading-[1.12] text-primary [overflow-wrap:anywhere] sm:text-5xl md:text-7xl">{post.title}</h1>
-          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 [&>span]:max-w-full [&>span]:break-words text-xs font-bold leading-relaxed text-on-surface-variant sm:text-sm"><span>{post.authorName}</span><span>{published}</span>{changed && <span>Diperbarui {formatDate(post.updatedAt)}</span>}<span>{readTime} menit baca</span></div>
+          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 [&>span]:max-w-full [&>span]:break-words text-xs font-bold leading-relaxed text-on-surface-variant sm:text-sm"><span>{published}</span>{changed && <span>Diperbarui {formatDate(post.updatedAt)}</span>}<span>{readTime} menit baca</span></div>
         </div>
       </header>
 
@@ -61,7 +61,7 @@ export default function PostClient({ post, relatedPosts }: { post: PublicPost; r
 }
 
 function PublicBlock({ block }: { block: PostBlock }) {
-  if (block.type === "text") return <div className="public-reading prose prose-base sm:prose-lg max-w-none break-words text-on-surface prose-headings:text-primary prose-a:break-all prose-a:text-public-accent prose-blockquote:border-secondary" dangerouslySetInnerHTML={{ __html: block.content }} />;
+  if (block.type === "text") return <div className="public-reading prose prose-base sm:prose-lg max-w-none break-words text-on-surface prose-headings:text-primary prose-blockquote:border-secondary" dangerouslySetInnerHTML={{ __html: block.content }} />;
   if (block.type === "image" && block.url) return <figure><Image src={block.url} alt={block.altText || block.title || "Gambar artikel"} width={1600} height={1000} className="h-auto w-full rounded-2xl object-contain" sizes="(max-width: 767px) calc(100vw - 32px), 880px" />{(block.title || block.caption) && <figcaption className="mt-2 text-center text-sm text-on-surface-variant"><b>{block.title}</b>{block.title && block.caption ? " — " : ""}{block.caption}</figcaption>}</figure>;
   if (block.type === "video" && block.url) { const embed = getYouTubeEmbedUrl(block.url); return embed ? <figure><div className="aspect-video overflow-hidden rounded-2xl bg-black"><iframe src={embed} title={block.title || "Video YouTube"} className="size-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div>{block.caption && <figcaption className="mt-2 text-sm text-on-surface-variant">{block.caption}</figcaption>}</figure> : <AccessibleLink block={block} icon="smart_display" />; }
   if (block.type === "pdf" && block.url) return <AccessibleLink block={block} icon="picture_as_pdf" label="Buka dokumen PDF" />;
