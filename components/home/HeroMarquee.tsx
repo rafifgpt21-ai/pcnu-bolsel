@@ -1,6 +1,3 @@
-'use client';
-
-import { useState } from 'react';
 import styles from './HeroMarquee.module.css';
 
 const messages = [
@@ -10,8 +7,6 @@ const messages = [
 ];
 
 export default function HeroMarquee() {
-  const [isPaused, setIsPaused] = useState(false);
-
   return (
     <div
       role="region"
@@ -25,13 +20,9 @@ export default function HeroMarquee() {
       </div>
 
       <div className={styles.viewport}>
-        <div
-          aria-hidden="true"
-          className={styles.track}
-          style={{ animationPlayState: isPaused ? 'paused' : 'running' }}
-        >
+        <div aria-hidden="true" className={styles.track}>
           {[0, 1].map((copy) => (
-            <div key={copy} className={`${styles.group} ${copy === 1 ? styles.copy : ''}`}>
+            <div key={copy} className={styles.group}>
               {messages.map((message) => (
                 <span key={message} className={`${styles.message} font-headline text-xs font-semibold sm:text-sm`}>
                   <span>{message}</span>
@@ -42,22 +33,6 @@ export default function HeroMarquee() {
           ))}
         </div>
       </div>
-
-      <button
-        type="button"
-        aria-label={isPaused ? 'Lanjutkan tulisan berjalan' : 'Jeda tulisan berjalan'}
-        title={isPaused ? 'Lanjutkan tulisan berjalan' : 'Jeda tulisan berjalan'}
-        onClick={() => setIsPaused((paused) => !paused)}
-        className={`${styles.control} m-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-primary transition-colors hover:bg-primary/10`}
-      >
-        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          {isPaused ? (
-            <path d="M5 3.5a.5.5 0 0 1 .76-.43l7 4.5a.5.5 0 0 1 0 .86l-7 4.5A.5.5 0 0 1 5 12.5z" />
-          ) : (
-            <path d="M4 3h3v10H4zm5 0h3v10H9z" />
-          )}
-        </svg>
-      </button>
     </div>
   );
 }
