@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import HeroSearch from '@/components/HeroSearch';
+import HeroMarquee from '@/components/home/HeroMarquee';
 import pcnuBolselLogo from '@/public/brand/pcnu-bolsel-logo.webp';
 
 export default function HomeHero() {
@@ -63,6 +64,8 @@ export default function HomeHero() {
           </span>
         </h1>
       </div>
+
+      <HeroMarquee />
 
       {/* Search Bar Area */}
       <div className="w-full max-w-3xl md:px-4 z-20 flex justify-center animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both">
